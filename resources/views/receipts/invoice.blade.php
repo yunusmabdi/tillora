@@ -25,7 +25,7 @@
             </div>
 
             <h1 class="text-3xl font-bold text-[#0F172A]">
-                CommerceHub ERP
+                Tillora
             </h1>
 
             <p class="text-slate-500">

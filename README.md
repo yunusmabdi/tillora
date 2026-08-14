@@ -1,4 +1,4 @@
-# CommerceHub ERP
+# Tillora
 
 > A modern, multi-warehouse Enterprise Resource Planning (ERP) and Point of Sale (POS) system built with Laravel and Filament.
 
@@ -9,7 +9,7 @@
 
 ## 📖 Overview
 
-CommerceHub ERP is a comprehensive inventory, sales, purchasing, and warehouse management system designed for retail and wholesale businesses. It provides businesses with an intuitive admin dashboard, powerful reporting tools, inventory tracking, and a modern Point of Sale (POS) interface.
+Tillora is a comprehensive inventory, sales, purchasing, and warehouse management system designed for retail and wholesale businesses. It provides businesses with an intuitive admin dashboard, powerful reporting tools, inventory tracking, and a modern Point of Sale (POS) interface.
 
 The project follows Laravel best practices using a service-oriented architecture, Filament Admin Panel, and role-based access control to deliver a scalable and maintainable business management solution.
 
@@ -115,9 +115,9 @@ app/
 ## 1. Clone the repository
 
 ```bash
-git clone https://github.com/yunusmabdi/commercehub_erp.git
+git clone https://github.com/yunusmabdi/tillora.git
 
-cd commercehub_erp
+cd tillora
 ```
 
 ## 2. Install dependencies
@@ -224,7 +224,7 @@ Permissions are managed using **Spatie Laravel Permission**.
 
 # 🏗 Architecture
 
-CommerceHub ERP follows a clean architecture approach:
+Tillora follows a clean architecture approach:
 
 - Service Layer Pattern
 - Form Requests for Validation

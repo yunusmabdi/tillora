@@ -55,3 +55,9 @@ Route::middleware('auth')->group(function () {
         ->name('receipt.show');
 
 });
+
+Route::post('/demo/cashier', [AuthController::class, 'demoCashier'])
+    ->name('demo.cashier');
+
+Route::post('/demo/admin', [AuthController::class, 'demoAdmin'])
+    ->name('demo.admin');

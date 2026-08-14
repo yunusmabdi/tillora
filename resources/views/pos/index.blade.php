@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>CommerceHub POS</title>
+    <title>Tillora POS</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -42,7 +42,7 @@
             <div>
 
                 <h1 class="text-3xl font-bold text-white">
-                    CommerceHub POS
+                    Tillora POS
                 </h1>
 
                 <p class="text-[#F8F1E7]">
