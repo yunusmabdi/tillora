@@ -14,7 +14,7 @@ class SaleItem extends Model
         'unit_price',
         'cost_price',
         'line_total',
-        'originial_price',
+        'original_price',
         'discount_amount'
     ];
 
