@@ -10,7 +10,7 @@ use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
-
+use Illuminate\Support\Facades\DB;
 
 class PurchasesTable
 {
@@ -24,17 +24,14 @@ class PurchasesTable
                     ->searchable()
                     ->sortable(),
 
-
                 TextColumn::make('supplier.company_name')
                     ->label('Supplier')
                     ->searchable()
                     ->sortable(),
 
-
                 TextColumn::make('purchase_date')
                     ->date()
                     ->sortable(),
-
 
                 TextColumn::make('status')
                     ->badge()
@@ -45,12 +42,10 @@ class PurchasesTable
                         'danger' => 'Cancelled',
                     ]),
 
-
                 TextColumn::make('total_amount')
                     ->label('Total')
                     ->money('KES')
                     ->sortable(),
-
 
                 TextColumn::make('created_at')
                     ->since(),
@@ -63,100 +58,121 @@ class PurchasesTable
 
             ->recordActions([
 
-                Action::make('receive')
+                /*
+                 * CHANGE STATUS
+                 *
+                 * Draft:
+                 *   → Ordered
+                 *   → Received
+                 *   → Cancelled
+                 *
+                 * Ordered:
+                 *   → Received
+                 */
+                Action::make('changeStatus')
+                    ->label('Change Status')
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('primary')
 
-                    ->label('Receive')
+                    ->visible(fn ($record) => in_array(
+                        $record->status,
+                        ['Draft', 'Ordered']
+                    ))
 
-                    ->icon('heroicon-o-check-circle')
-
-                    ->color('success')
+                    ->form([
+                        \Filament\Forms\Components\Select::make('status')
+                            ->label('New Status')
+                            ->options(fn ($record) => $record->status === 'Draft'
+                                ? [
+                                    'Ordered' => 'Ordered',
+                                    'Received' => 'Received',
+                                    'Cancelled' => 'Cancelled',
+                                ]
+                                : [
+                                    'Received' => 'Received',
+                                ]
+                            )
+                            ->required()
+                            ->native(false),
+                    ])
 
                     ->requiresConfirmation()
 
-                    ->visible(fn ($record) => $record->status === 'Ordered')
+                    ->action(function ($record, array $data) {
 
+                        $newStatus = $data['status'];
 
-                    ->action(function ($record) {
+                        /*
+                         * Make sure the purchase hasn't already
+                         * been received by another action/session.
+                         */
+                        if (
+                            $record->status === 'Received' ||
+                            $record->status === 'Cancelled'
+                        ) {
+                            Notification::make()
+                                ->title('Purchase can no longer be changed.')
+                                ->warning()
+                                ->send();
 
-
-                        foreach ($record->items as $item) {
-
-
-                            // Increase product stock
-
-                            $item->product->increment(
-
-                                'stock_quantity',
-
-                                $item->quantity
-
-                            );
-
-
-                            // Create stock movement record
-
-                            StockMovement::create([
-
-                                'product_id' => $item->product_id,
-
-                                'type' => 'IN',
-
-                                'quantity' => $item->quantity,
-
-                                'reference_type' => 'Purchase',
-
-                                'reference_id' => $record->id,
-
-                                'user_id' => auth()->id(),
-
-                                'description' => 
-                                    'Stock received from purchase ' 
-                                    . $record->purchase_number,
-
-                            ]);
-
+                            return;
                         }
 
+                        DB::transaction(function () use ($record, $newStatus) {
 
+                            /*
+                             * Only increase stock when the purchase
+                             * becomes Received.
+                             */
+                            if ($newStatus === 'Received') {
 
-                        // Update purchase status
+                                foreach ($record->items as $item) {
 
-                        $record->update([
+                                    // Increase product stock
+                                    $item->product->increment(
+                                        'stock_quantity',
+                                        $item->quantity
+                                    );
 
-                            'status' => 'Received',
+                                    // Record stock movement
+                                    StockMovement::create([
+                                        'product_id' => $item->product_id,
+                                        'type' => 'IN',
+                                        'quantity' => $item->quantity,
+                                        'reference_type' => 'Purchase',
+                                        'reference_id' => $record->id,
+                                        'user_id' => auth()->id(),
+                                        'description' =>
+                                            'Stock received from purchase '
+                                            . $record->purchase_number,
+                                    ]);
+                                }
+                            }
 
-                        ]);
-
-
+                            /*
+                             * Update purchase status.
+                             */
+                            $record->update([
+                                'status' => $newStatus,
+                            ]);
+                        });
 
                         Notification::make()
-
-                            ->title('Purchase received successfully.')
-
+                            ->title("Purchase status changed to {$newStatus}.")
                             ->success()
-
                             ->send();
-
-
                     }),
-
-
 
                 EditAction::make(),
 
             ])
 
-
-
             ->toolbarActions([
 
                 BulkActionGroup::make([
-
                     DeleteBulkAction::make(),
-
                 ]),
 
             ]);
-
     }
 }

@@ -43,7 +43,9 @@ class PurchaseForm
                                 'Cancelled' => 'Cancelled',
                             ])
                             ->default('Draft')
-                            ->required(),
+                            ->required()
+                            ->disabled(fn (string $operation): bool => $operation === 'edit')
+                            ->dehydrated(fn (string $operation): bool => $operation !== 'edit'),
 
                         Textarea::make('note')
                             ->columnSpanFull(),

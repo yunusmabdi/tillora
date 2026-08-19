@@ -9,6 +9,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Str;
+use Filament\Forms\Components\FileUpload;
 
 class ProductForm
 {
@@ -57,6 +58,16 @@ class ProductForm
 
                         Textarea::make('description')
                             ->rows(4)
+                            ->columnSpanFull(),
+
+                        FileUpload::make('image')
+                            ->label('Product Image')
+                            ->image()
+                            ->disk('public')
+                            ->directory('products')
+                            ->visibility('public')
+                            ->imageEditor()
+                            ->maxSize(2048)
                             ->columnSpanFull(),
                     ])
                     ->columns(2),

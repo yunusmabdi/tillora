@@ -11,6 +11,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Filament\Tables\Columns\ImageColumn;
 
 class ProductsTable
 {
@@ -18,6 +19,11 @@ class ProductsTable
     {
         return $table
             ->columns([
+                ImageColumn::make('image')
+                    ->label('Image')
+                    ->disk('public')
+                    ->square()
+                    ->imageSize(50),
                 TextColumn::make('name')
                     ->label('Product Name')
                     ->searchable()

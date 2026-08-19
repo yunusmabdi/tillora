@@ -18,6 +18,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolesAndPermissionsSeeder::class,
             SuperAdminSeeder::class,
+            TilloraUsersSeeder::class,
+            TilloraDemoSeeder::class,
         ]);
     }
 }

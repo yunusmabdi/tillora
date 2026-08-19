@@ -16,6 +16,7 @@ use \Illuminate\Database\Eloquent\Relations\HasMany;
     'name',
     'slug',
     'description',
+    'image',
     'cost_price',
     'selling_price',
     'stock_quantity',
