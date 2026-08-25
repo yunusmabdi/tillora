@@ -38,6 +38,9 @@ class Product extends Model
             'minimum_stock' => 'decimal:2',
             'maximum_stock' => 'decimal:2',
             'is_active' => 'boolean',
+            'discount_active' => 'boolean',
+            'discount_type' => 'string',
+            'discount_value' => 'decimal:2',
         ];
     }
     public function category(): BelongsTo
