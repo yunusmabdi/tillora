@@ -18,13 +18,9 @@ class Sale extends Model
         'payment_status',
         'payment_method',
 
-        // Order / fulfillment
+        // Fulfillment
         'fulfillment_status',
-
-        // Approval
-        'approved_by',
-        'approved_at',
-        'rejection_reason',
+        'cancellation_reason',
 
         // Amounts
         'subtotal',
@@ -53,22 +49,19 @@ class Sale extends Model
     protected static function booted(): void
     {
         static::creating(function ($sale) {
-
             if (! $sale->invoice_number) {
-
                 $lastSale = static::latest('id')->first();
 
                 $nextNumber = $lastSale
                     ? $lastSale->id + 1
                     : 1;
 
-                $sale->invoice_number =
-                    'INV-' . str_pad(
-                        $nextNumber,
-                        5,
-                        '0',
-                        STR_PAD_LEFT
-                    );
+                $sale->invoice_number = 'INV-' . str_pad(
+                    $nextNumber,
+                    5,
+                    '0',
+                    STR_PAD_LEFT
+                );
             }
         });
     }
@@ -93,29 +86,6 @@ class Sale extends Model
     public function items(): HasMany
     {
         return $this->hasMany(SaleItem::class);
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Approval
-    |--------------------------------------------------------------------------
-    */
-
-    public function approvedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'approved_by');
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Order / Fulfillment Status History
-    |--------------------------------------------------------------------------
-    */
-
-    public function statusHistories(): HasMany
-    {
-        return $this->hasMany(SaleStatusHistory::class)
-            ->orderBy('created_at');
     }
 
     /*
@@ -153,7 +123,6 @@ class Sale extends Model
     {
         return [
             'sale_date' => 'datetime',
-            'approved_at' => 'datetime',
 
             'subtotal' => 'decimal:2',
             'discount' => 'decimal:2',

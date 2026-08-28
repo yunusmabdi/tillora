@@ -2,8 +2,6 @@
 
 namespace App\Filament\Resources\Sales;
 
-use App\Filament\Resources\Sales\Pages\CreateSale;
-use App\Filament\Resources\Sales\Pages\EditSale;
 use App\Filament\Resources\Sales\Pages\ListSales;
 use App\Filament\Resources\Sales\Schemas\SaleForm;
 use App\Filament\Resources\Sales\Tables\SalesTable;
@@ -14,14 +12,22 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
+use App\Filament\Resources\Sales\Schemas\SaleInfolist;
 
 class SaleResource extends Resource
 {
     protected static ?string $model = Sale::class;
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-banknotes';
+    protected static string|BackedEnum|null $navigationIcon =
+        Heroicon::OutlinedBanknotes;
 
-    protected static ?string $recordTitleAttribute = 'name';
+    protected static ?string $navigationLabel = 'Sales';
+
+    protected static ?string $modelLabel = 'Sale';
+
+    protected static ?string $pluralModelLabel = 'Sales';
+
+    protected static ?string $recordTitleAttribute = 'invoice_number';
 
     protected static string|UnitEnum|null $navigationGroup = 'Inventory';
 
@@ -39,18 +45,19 @@ class SaleResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 
     public static function getPages(): array
     {
         return [
             'index' => ListSales::route('/'),
-            'create' => CreateSale::route('/create'),
             'view' => Pages\ViewSale::route('/{record}'),
-            'edit' => EditSale::route('/{record}/edit'),
         ];
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return SaleInfolist::configure($schema);
     }
 }

@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\Sales\Pages;
 
 use App\Filament\Resources\Sales\SaleResource;
-use Filament\Actions\DeleteAction;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 
 class EditSale extends EditRecord
@@ -12,18 +12,15 @@ class EditSale extends EditRecord
 
     protected function getHeaderActions(): array
     {
-        return [
-            DeleteAction::make(),
-        ];
+        return [];
     }
-    protected function authorizeAccess(): void
-    {
-        parent::authorizeAccess();
 
-        abort_if(
-            in_array($this->record->status, ['Completed', 'Cancelled']),
-            403,
-            'This sale can no longer be edited.'
-        );
+    protected function afterSave(): void
+    {
+        Notification::make()
+            ->title('Order status updated')
+            ->body('The fulfillment status has been updated successfully.')
+            ->success()
+            ->send();
     }
 }

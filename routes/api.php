@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CustomerAuthController;
 use App\Http\Controllers\Api\DeliveryZoneController;
 use App\Http\Controllers\Api\DeliveryController;
+use App\Http\Controllers\Api\OrderController;
 
 // =====================================================
 // PUBLIC API
@@ -13,7 +14,10 @@ use App\Http\Controllers\Api\DeliveryController;
 
 Route::apiResource('products', ProductController::class);
 
-Route::get('categories', [CategoryController::class, 'index']);
+Route::get(
+    'categories',
+    [CategoryController::class, 'index']
+);
 
 Route::get(
     'delivery-zones',
@@ -26,7 +30,7 @@ Route::get(
 );
 
 Route::post(
-    '/delivery/calculate',
+    'delivery/calculate',
     [DeliveryController::class, 'calculate']
 );
 
@@ -34,33 +38,28 @@ Route::post(
 // CUSTOMER AUTHENTICATION
 // =====================================================
 
-// Send email verification OTP
 Route::post(
-    '/customer/send-otp',
+    'customer/send-otp',
     [CustomerAuthController::class, 'sendOtp']
 );
 
-// Verify email verification OTP
 Route::post(
-    '/customer/verify-otp',
+    'customer/verify-otp',
     [CustomerAuthController::class, 'verifyOtp']
 );
 
-// Resend email verification OTP
 Route::post(
-    '/customer/resend-otp',
+    'customer/resend-otp',
     [CustomerAuthController::class, 'resendOtp']
 );
 
-// Create customer account
 Route::post(
-    '/customer/register',
+    'customer/register',
     [CustomerAuthController::class, 'register']
 );
 
-// Login
 Route::post(
-    '/customer/login',
+    'customer/login',
     [CustomerAuthController::class, 'login']
 );
 
@@ -71,17 +70,36 @@ Route::post(
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::get(
-        '/customer/me',
+        'customer/me',
         [CustomerAuthController::class, 'me']
     );
 
     Route::put(
-        '/customer/profile',
+        'customer/profile',
         [CustomerAuthController::class, 'updateProfile']
     );
 
     Route::post(
-        '/customer/logout',
+        'customer/logout',
         [CustomerAuthController::class, 'logout']
+    );
+
+    // =================================================
+    // CUSTOMER ORDERS
+    // =================================================
+
+    Route::get(
+        'orders',
+        [OrderController::class, 'index']
+    );
+
+    Route::get(
+        'orders/{id}',
+        [OrderController::class, 'show']
+    );
+
+    Route::post(
+        'orders',
+        [OrderController::class, 'store']
     );
 });

@@ -17,11 +17,10 @@ class InventoryService
     public function validateSaleStock(Sale $sale): void
     {
         foreach ($sale->items as $item) {
-
             $product = $item->product;
 
             if (! $product) {
-                throw new RuntimeException("Product not found.");
+                throw new RuntimeException('Product not found.');
             }
 
             if ($product->stock_quantity < $item->quantity) {
@@ -38,11 +37,24 @@ class InventoryService
     public function issueSaleStock(Sale $sale): void
     {
         foreach ($sale->items as $item) {
-
-            $product = $item->product;
-
             $product = Product::lockForUpdate()
                 ->find($item->product_id);
+
+            if (! $product) {
+                throw new RuntimeException('Product not found.');
+            }
+
+            if ($product->stock_quantity < $item->quantity) {
+                throw new RuntimeException(
+                    "{$product->name} has only {$product->stock_quantity} item(s) in stock."
+                );
+            }
+
+            $product->decrement(
+                'stock_quantity',
+                $item->quantity
+            );
+
             StockMovement::create([
                 'product_id'     => $product->id,
                 'type'           => 'OUT',
@@ -57,15 +69,21 @@ class InventoryService
 
     /**
      * Increase stock from a received purchase.
-     * (We'll implement this when we refactor Purchasing.)
      */
     public function receivePurchaseStock(Purchase $purchase): void
     {
         foreach ($purchase->items as $item) {
+            $product = Product::lockForUpdate()
+                ->find($item->product_id);
 
-            $product = $item->product;
+            if (! $product) {
+                throw new RuntimeException('Product not found.');
+            }
 
-            $product->increment('stock_quantity', $item->quantity);
+            $product->increment(
+                'stock_quantity',
+                $item->quantity
+            );
 
             StockMovement::create([
                 'product_id'     => $product->id,
