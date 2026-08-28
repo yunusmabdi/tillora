@@ -11,9 +11,14 @@ class SaleWorkflowService
 {
     /**
      * Approve an order.
+     *
+     * Only orders awaiting admin approval can be approved.
      */
-    public function approve(Sale $sale, User $admin): Sale
-    {
+    public function approve(
+        Sale $sale,
+        User $admin
+    ): Sale {
+
         if ($sale->fulfillment_status !== 'awaiting_approval') {
             throw new RuntimeException(
                 'Only orders awaiting approval can be approved.'
@@ -36,12 +41,19 @@ class SaleWorkflowService
                 userId: $admin->id,
             );
 
-            return $sale->fresh();
+            return $sale->fresh([
+                'customer',
+                'items.product',
+                'statusHistories.updatedBy',
+                'approvedBy',
+            ]);
         });
     }
 
     /**
      * Reject an order.
+     *
+     * Only orders awaiting admin approval can be rejected.
      */
     public function reject(
         Sale $sale,
@@ -67,21 +79,28 @@ class SaleWorkflowService
             $reason
         ) {
 
+            $reason = trim($reason);
+
             $sale->update([
                 'fulfillment_status' => 'rejected',
                 'approved_by' => $admin->id,
                 'approved_at' => now(),
-                'rejection_reason' => trim($reason),
+                'rejection_reason' => $reason,
             ]);
 
             $this->recordHistory(
                 sale: $sale,
                 status: 'rejected',
-                note: trim($reason),
+                note: $reason,
                 userId: $admin->id,
             );
 
-            return $sale->fresh();
+            return $sale->fresh([
+                'customer',
+                'items.product',
+                'statusHistories.updatedBy',
+                'approvedBy',
+            ]);
         });
     }
 
@@ -107,7 +126,7 @@ class SaleWorkflowService
     }
 
     /**
-     * Mark an order ready for delivery.
+     * Mark an order as ready for delivery.
      */
     public function markReady(
         Sale $sale,
@@ -174,7 +193,12 @@ class SaleWorkflowService
                 userId: $user?->id,
             );
 
-            return $sale->fresh();
+            return $sale->fresh([
+                'customer',
+                'items.product',
+                'statusHistories.updatedBy',
+                'approvedBy',
+            ]);
         });
     }
 
@@ -199,13 +223,15 @@ class SaleWorkflowService
         return $this->changeStatus(
             sale: $sale,
             status: 'cancelled',
-            note: $reason ?: 'Order cancelled.',
+            note: $reason
+                ? trim($reason)
+                : 'Order cancelled.',
             user: $user,
         );
     }
 
     /**
-     * Generic status transition.
+     * Change fulfillment status and create history record.
      */
     protected function changeStatus(
         Sale $sale,
@@ -232,12 +258,17 @@ class SaleWorkflowService
                 userId: $user?->id,
             );
 
-            return $sale->fresh();
+            return $sale->fresh([
+                'customer',
+                'items.product',
+                'statusHistories.updatedBy',
+                'approvedBy',
+            ]);
         });
     }
 
     /**
-     * Record a status history entry.
+     * Record a fulfillment status history entry.
      */
     protected function recordHistory(
         Sale $sale,
@@ -246,7 +277,7 @@ class SaleWorkflowService
         ?int $userId
     ): void {
 
-        $sale->statusHistory()->create([
+        $sale->statusHistories()->create([
             'status' => $status,
             'note' => $note,
             'updated_by' => $userId,
