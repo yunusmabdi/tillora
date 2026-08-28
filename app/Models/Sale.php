@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\DeliveryZone;
+use App\Models\SaleStatusHistory;
+use App\Models\User;
 
 class Sale extends Model
 {
@@ -14,6 +17,9 @@ class Sale extends Model
         'sale_date',
         'status',
 
+        'payment_status',
+        'fulfillment_status',
+
         'payment_method',
 
         'subtotal',
@@ -22,7 +28,17 @@ class Sale extends Model
         'total_amount',
 
         'amount_paid',
+        'advance_amount',
+        'balance_amount',
         'change_amount',
+
+        'delivery_zone_id',
+        'delivery_address',
+        'delivery_fee',
+
+        'approved_by',
+        'approved_at',
+        'rejection_reason',
         
         'notes',
     ];
@@ -55,14 +71,42 @@ class Sale extends Model
     {
         return $this->hasMany(SaleItem::class);
     }
-    protected function casts(): array{
-        return[
+    protected function casts(): array
+    {
+        return [
             'sale_date' => 'datetime',
+            'approved_at' => 'datetime',
+
+            'subtotal' => 'decimal:2',
+            'discount' => 'decimal:2',
+            'tax' => 'decimal:2',
+            'total_amount' => 'decimal:2',
+
+            'amount_paid' => 'decimal:2',
+            'advance_amount' => 'decimal:2',
+            'balance_amount' => 'decimal:2',
+            'change_amount' => 'decimal:2',
+            'delivery_fee' => 'decimal:2',
         ];
     }
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function deliveryZone(): BelongsTo
+    {
+        return $this->belongsTo(DeliveryZone::class);
+    }
+
+    public function statusHistory(): HasMany
+    {
+        return $this->hasMany(SaleStatusHistory::class);
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 }
