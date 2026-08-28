@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CustomerAuthController;
+use App\Http\Controllers\Api\DeliveryZoneController;
+use App\Http\Controllers\Api\DeliveryController;
 
 // =====================================================
 // PUBLIC API
@@ -12,6 +14,21 @@ use App\Http\Controllers\Api\CustomerAuthController;
 Route::apiResource('products', ProductController::class);
 
 Route::get('categories', [CategoryController::class, 'index']);
+
+Route::get(
+    'delivery-zones',
+    [DeliveryZoneController::class, 'index']
+);
+
+Route::get(
+    'delivery-zones/{deliveryZone}',
+    [DeliveryZoneController::class, 'show']
+);
+
+Route::post(
+    '/delivery/calculate',
+    [DeliveryController::class, 'calculate']
+);
 
 // =====================================================
 // CUSTOMER AUTHENTICATION
