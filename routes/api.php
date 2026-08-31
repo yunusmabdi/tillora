@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CustomerAuthController;
@@ -8,11 +9,16 @@ use App\Http\Controllers\Api\DeliveryZoneController;
 use App\Http\Controllers\Api\DeliveryController;
 use App\Http\Controllers\Api\OrderController;
 
-// =====================================================
-// PUBLIC API
-// =====================================================
+/*
+|--------------------------------------------------------------------------
+| PUBLIC API
+|--------------------------------------------------------------------------
+*/
 
-Route::apiResource('products', ProductController::class);
+Route::apiResource(
+    'products',
+    ProductController::class
+);
 
 Route::get(
     'categories',
@@ -34,9 +40,12 @@ Route::post(
     [DeliveryController::class, 'calculate']
 );
 
-// =====================================================
-// CUSTOMER AUTHENTICATION
-// =====================================================
+
+/*
+|--------------------------------------------------------------------------
+| CUSTOMER AUTHENTICATION
+|--------------------------------------------------------------------------
+*/
 
 Route::post(
     'customer/send-otp',
@@ -63,11 +72,20 @@ Route::post(
     [CustomerAuthController::class, 'login']
 );
 
-// =====================================================
-// PROTECTED CUSTOMER ROUTES
-// =====================================================
+
+/*
+|--------------------------------------------------------------------------
+| PROTECTED CUSTOMER ROUTES
+|--------------------------------------------------------------------------
+*/
 
 Route::middleware('auth:sanctum')->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | CUSTOMER PROFILE
+    |--------------------------------------------------------------------------
+    */
 
     Route::get(
         'customer/me',
@@ -84,9 +102,12 @@ Route::middleware('auth:sanctum')->group(function () {
         [CustomerAuthController::class, 'logout']
     );
 
-    // =================================================
-    // CUSTOMER ORDERS
-    // =================================================
+
+    /*
+    |--------------------------------------------------------------------------
+    | CUSTOMER ORDERS
+    |--------------------------------------------------------------------------
+    */
 
     Route::get(
         'orders',
@@ -101,5 +122,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post(
         'orders',
         [OrderController::class, 'store']
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CUSTOMER ORDER PAYMENT
+    |--------------------------------------------------------------------------
+    */
+
+    Route::post(
+        'orders/{id}/payment',
+        [OrderController::class, 'confirmPayment']
     );
 });

@@ -17,6 +17,7 @@ class Sale extends Model
         // Payment
         'payment_status',
         'payment_method',
+        'transaction_reference',
 
         // Fulfillment
         'fulfillment_status',
@@ -25,6 +26,7 @@ class Sale extends Model
         // Amounts
         'subtotal',
         'discount',
+        'discount_amount',
         'tax',
         'total_amount',
         'amount_paid',
@@ -49,7 +51,9 @@ class Sale extends Model
     protected static function booted(): void
     {
         static::creating(function ($sale) {
+
             if (! $sale->invoice_number) {
+
                 $lastSale = static::latest('id')->first();
 
                 $nextNumber = $lastSale
@@ -126,6 +130,7 @@ class Sale extends Model
 
             'subtotal' => 'decimal:2',
             'discount' => 'decimal:2',
+            'discount_amount' => 'decimal:2',
             'tax' => 'decimal:2',
             'total_amount' => 'decimal:2',
             'amount_paid' => 'decimal:2',

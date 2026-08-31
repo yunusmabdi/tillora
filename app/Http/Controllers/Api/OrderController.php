@@ -14,6 +14,12 @@ class OrderController extends Controller
     ) {
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | CUSTOMER ORDERS
+    |--------------------------------------------------------------------------
+    */
+
     /**
      * Get the customer's orders.
      */
@@ -38,8 +44,10 @@ class OrderController extends Controller
     /**
      * Get a single customer order.
      */
-    public function show(Request $request, int $id)
-    {
+    public function show(
+        Request $request,
+        int $id
+    ) {
         $customer = $request->user();
 
         $order = $customer->sales()
@@ -62,8 +70,22 @@ class OrderController extends Controller
         ]);
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | CREATE ORDER
+    |--------------------------------------------------------------------------
+    */
+
     /**
-     * Place a new customer order.
+     * Create a new customer order.
+     *
+     * IMPORTANT:
+     *
+     * This does NOT confirm payment.
+     * This does NOT deduct stock.
+     *
+     * It creates a Draft order which must be paid
+     * through the payment endpoint.
      */
     public function store(Request $request)
     {
@@ -98,10 +120,9 @@ class OrderController extends Controller
                 'exists:delivery_zones,id',
             ],
 
-            'advance_amount' => [
+            'payment_option' => [
                 'required',
-                'numeric',
-                'min:0',
+                'in:full,advance',
             ],
 
             'notes' => [
@@ -112,28 +133,136 @@ class OrderController extends Controller
         ]);
 
         try {
+
             $order = $this->salesService->createCustomerOrder(
                 customerId: $request->user()->id,
+
                 items: $validated['items'],
-                deliveryAddress: $validated['delivery_address'],
-                deliveryZoneId: $validated['delivery_zone_id'],
-                advanceAmount: (float) $validated['advance_amount'],
-                notes: $validated['notes'] ?? null,
+
+                deliveryAddress:
+                    $validated['delivery_address'],
+
+                deliveryZoneId:
+                    $validated['delivery_zone_id'],
+
+                paymentOption:
+                    $validated['payment_option'],
+
+                notes:
+                    $validated['notes'] ?? null,
             );
 
             return response()->json([
                 'success' => true,
-                'message' => 'Order placed successfully.',
+
+                'message' =>
+                    'Order created. Proceed to payment.',
+
                 'order' => $order,
             ], 201);
 
         } catch (RuntimeException $e) {
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 422);
         }
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | PAYMENT
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Confirm a successful customer payment.
+     *
+     * This is the point where:
+     *
+     * 1. Payment is recorded
+     * 2. Order becomes Completed
+     * 3. Stock is deducted
+     * 4. Fulfillment becomes Preparing
+     */
+    public function confirmPayment(
+        Request $request,
+        int $id
+    ) {
+        $validated = $request->validate([
+            'amount_paid' => [
+                'required',
+                'numeric',
+                'gt:0',
+            ],
+
+            'payment_method' => [
+                'required',
+                'in:mpesa,card',
+            ],
+
+            'transaction_reference' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+        ]);
+
+        $customer = $request->user();
+
+        /*
+         * Customers can only pay for their own orders.
+         */
+        $order = $customer->sales()
+            ->find($id);
+
+        if (! $order) {
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found.',
+            ], 404);
+        }
+
+        try {
+
+            $order = $this->salesService->confirmCustomerPayment(
+                sale: $order,
+
+                amountPaid:
+                    (float) $validated['amount_paid'],
+
+                paymentMethod:
+                    $validated['payment_method'],
+
+                transactionReference:
+                    $validated['transaction_reference'],
+            );
+
+            return response()->json([
+                'success' => true,
+
+                'message' =>
+                    'Payment confirmed successfully.',
+
+                'order' => $order,
+            ]);
+
+        } catch (RuntimeException $e) {
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | DELIVERY ZONES
+    |--------------------------------------------------------------------------
+    */
 
     /**
      * Get available delivery zones.
