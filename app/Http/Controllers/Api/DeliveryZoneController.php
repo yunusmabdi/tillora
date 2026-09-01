@@ -14,13 +14,11 @@ class DeliveryZoneController extends Controller
     {
         $zones = DeliveryZone::query()
             ->where('is_active', true)
-            ->orderBy('min_distance')
+            ->orderBy('name')
             ->get([
                 'id',
                 'name',
                 'description',
-                'min_distance',
-                'max_distance',
                 'fee',
             ]);
 
@@ -48,8 +46,6 @@ class DeliveryZoneController extends Controller
                 'id',
                 'name',
                 'description',
-                'min_distance',
-                'max_distance',
                 'fee',
             ]),
         ]);

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\DeliveryZone;
 use App\Services\SalesService;
 use Illuminate\Http\Request;
 use RuntimeException;
@@ -79,13 +80,8 @@ class OrderController extends Controller
     /**
      * Create a new customer order.
      *
-     * IMPORTANT:
-     *
-     * This does NOT confirm payment.
-     * This does NOT deduct stock.
-     *
-     * It creates a Draft order which must be paid
-     * through the payment endpoint.
+     * This does not confirm payment or deduct stock.
+     * The order remains pending until payment is confirmed.
      */
     public function store(Request $request)
     {
@@ -108,16 +104,16 @@ class OrderController extends Controller
                 'min:1',
             ],
 
-            'delivery_address' => [
-                'required',
-                'string',
-                'max:1000',
-            ],
-
             'delivery_zone_id' => [
                 'required',
                 'integer',
                 'exists:delivery_zones,id',
+            ],
+
+            'delivery_address' => [
+                'required',
+                'string',
+                'max:1000',
             ],
 
             'payment_option' => [
@@ -132,8 +128,22 @@ class OrderController extends Controller
             ],
         ]);
 
-        try {
+        /*
+         * Make sure the selected delivery zone is active.
+         */
+        $deliveryZone = DeliveryZone::query()
+            ->where('id', $validated['delivery_zone_id'])
+            ->where('is_active', true)
+            ->first();
 
+        if (! $deliveryZone) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The selected delivery zone is not available.',
+            ], 422);
+        }
+
+        try {
             $order = $this->salesService->createCustomerOrder(
                 customerId: $request->user()->id,
 
@@ -143,7 +153,7 @@ class OrderController extends Controller
                     $validated['delivery_address'],
 
                 deliveryZoneId:
-                    $validated['delivery_zone_id'],
+                    $deliveryZone->id,
 
                 paymentOption:
                     $validated['payment_option'],
@@ -162,7 +172,6 @@ class OrderController extends Controller
             ], 201);
 
         } catch (RuntimeException $e) {
-
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -182,9 +191,9 @@ class OrderController extends Controller
      * This is the point where:
      *
      * 1. Payment is recorded
-     * 2. Order becomes Completed
+     * 2. Order becomes completed
      * 3. Stock is deducted
-     * 4. Fulfillment becomes Preparing
+     * 4. Fulfillment moves to preparing
      */
     public function confirmPayment(
         Request $request,
@@ -218,7 +227,6 @@ class OrderController extends Controller
             ->find($id);
 
         if (! $order) {
-
             return response()->json([
                 'success' => false,
                 'message' => 'Order not found.',
@@ -226,7 +234,6 @@ class OrderController extends Controller
         }
 
         try {
-
             $order = $this->salesService->confirmCustomerPayment(
                 sale: $order,
 
@@ -250,7 +257,6 @@ class OrderController extends Controller
             ]);
 
         } catch (RuntimeException $e) {
-
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -265,19 +271,19 @@ class OrderController extends Controller
     */
 
     /**
-     * Get available delivery zones.
+     * Get all active delivery zones available to customers.
+     *
+     * Delivery fees are fixed per zone.
      */
     public function deliveryZones()
     {
-        $zones = \App\Models\DeliveryZone::query()
+        $zones = DeliveryZone::query()
             ->where('is_active', true)
-            ->orderBy('min_distance')
+            ->orderBy('name')
             ->get([
                 'id',
                 'name',
                 'description',
-                'min_distance',
-                'max_distance',
                 'fee',
             ]);
 

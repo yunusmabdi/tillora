@@ -16,24 +16,17 @@ class DeliveryController extends Controller
     ): JsonResponse {
 
         $validated = $request->validate([
-            'latitude' => [
+            'delivery_zone_id' => [
                 'required',
-                'numeric',
-                'between:-90,90',
-            ],
-
-            'longitude' => [
-                'required',
-                'numeric',
-                'between:-180,180',
+                'integer',
+                'exists:delivery_zones,id',
             ],
         ]);
 
         try {
 
             $result = $deliveryService->calculate(
-                (float) $validated['latitude'],
-                (float) $validated['longitude']
+                (int) $validated['delivery_zone_id']
             );
 
             return response()->json([

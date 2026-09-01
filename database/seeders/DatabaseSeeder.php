@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             SuperAdminSeeder::class,
             TilloraUsersSeeder::class,
             TilloraDemoSeeder::class,
+            DeliveryZoneSeeder::class,
         ]);
     }
 }

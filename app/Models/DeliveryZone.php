@@ -12,8 +12,6 @@ class DeliveryZone extends Model
         'store_id',
         'name',
         'description',
-        'min_distance',
-        'max_distance',
         'fee',
         'is_active',
     ];
@@ -21,8 +19,6 @@ class DeliveryZone extends Model
     protected function casts(): array
     {
         return [
-            'min_distance' => 'decimal:2',
-            'max_distance' => 'decimal:2',
             'fee' => 'decimal:2',
             'is_active' => 'boolean',
         ];

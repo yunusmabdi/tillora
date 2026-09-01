@@ -17,7 +17,7 @@ class DeliveryZoneForm
 
                 Section::make('Delivery Zone')
                     ->description(
-                        'Define the distance range and delivery charge for this zone.'
+                        'Define a delivery area and its fixed delivery charge.'
                     )
                     ->schema([
 
@@ -35,21 +35,6 @@ class DeliveryZoneForm
                             ->rows(3)
                             ->maxLength(1000),
 
-                        TextInput::make('min_distance')
-                            ->label('Minimum Distance')
-                            ->suffix('KM')
-                            ->numeric()
-                            ->minValue(0)
-                            ->required(),
-
-                        TextInput::make('max_distance')
-                            ->label('Maximum Distance')
-                            ->suffix('KM')
-                            ->numeric()
-                            ->minValue(0)
-                            ->required()
-                            ->gt('min_distance'),
-
                         TextInput::make('fee')
                             ->label('Delivery Fee')
                             ->prefix('KSh')
@@ -61,7 +46,7 @@ class DeliveryZoneForm
                             ->label('Active')
                             ->default(true)
                             ->helperText(
-                                'Inactive zones will not be used when calculating delivery charges.'
+                                'Inactive zones will not be available for customers during checkout.'
                             ),
                     ])
                     ->columns(2),

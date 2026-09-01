@@ -23,17 +23,10 @@ class DeliveryZonesTable
                     ->sortable()
                     ->weight('bold'),
 
-                TextColumn::make('min_distance')
-                    ->label('From')
-                    ->numeric(decimalPlaces: 2)
-                    ->suffix(' KM')
-                    ->sortable(),
-
-                TextColumn::make('max_distance')
-                    ->label('To')
-                    ->numeric(decimalPlaces: 2)
-                    ->suffix(' KM')
-                    ->sortable(),
+                TextColumn::make('description')
+                    ->label('Description')
+                    ->limit(40)
+                    ->toggleable(),
 
                 TextColumn::make('fee')
                     ->label('Delivery Fee')
@@ -72,6 +65,6 @@ class DeliveryZonesTable
                 ]),
             ])
 
-            ->defaultSort('min_distance');
+            ->defaultSort('name');
     }
 }
