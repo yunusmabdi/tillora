@@ -11,6 +11,8 @@ class Sale extends Model
     protected $fillable = [
         'invoice_number',
         'customer_id',
+        'user_id',
+        'store_id',
         'sale_date',
         'status',
 
@@ -79,6 +81,17 @@ class Sale extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Store
+    |--------------------------------------------------------------------------
+    */
+
+    public function store(): BelongsTo
+    {
+        return $this->belongsTo(Store::class);
     }
 
     /*

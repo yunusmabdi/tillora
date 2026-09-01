@@ -135,4 +135,8 @@ Route::middleware('auth:sanctum')->group(function () {
         'orders/{id}/payment',
         [OrderController::class, 'confirmPayment']
     );
+
+    Route::get(
+        '/delivery-zones', 
+        [OrderController::class, 'deliveryZones']);
 });

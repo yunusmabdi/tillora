@@ -3,58 +3,50 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\DeliveryZone;
+use App\Services\DeliveryService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 
 class DeliveryController extends Controller
 {
-    /**
-     * Calculate the delivery fee for a given distance.
-     *
-     * The Android app will eventually send an address,
-     * which will be converted to a distance before reaching
-     * this logic.
-     */
-    public function calculate(Request $request)
-    {
+    public function calculate(
+        Request $request,
+        DeliveryService $deliveryService
+    ): JsonResponse {
+
         $validated = $request->validate([
-            'distance' => [
+            'latitude' => [
                 'required',
                 'numeric',
-                'min:0',
+                'between:-90,90',
+            ],
+
+            'longitude' => [
+                'required',
+                'numeric',
+                'between:-180,180',
             ],
         ]);
 
-        $distance = (float) $validated['distance'];
+        try {
 
-        $zone = DeliveryZone::query()
-            ->where('is_active', true)
-            ->where('min_distance', '<=', $distance)
-            ->where('max_distance', '>=', $distance)
-            ->orderBy('min_distance')
-            ->first();
+            $result = $deliveryService->calculate(
+                (float) $validated['latitude'],
+                (float) $validated['longitude']
+            );
 
-        if (! $zone) {
+            return response()->json([
+                'success' => true,
+                'data' => $result,
+            ]);
+
+        } catch (InvalidArgumentException $e) {
+
             return response()->json([
                 'success' => false,
-                'message' => 'No delivery zone is available for this distance.',
+                'message' => $e->getMessage(),
             ], 422);
         }
-
-        return response()->json([
-            'success' => true,
-
-            'delivery' => [
-                'distance' => round($distance, 2),
-
-                'zone' => [
-                    'id' => $zone->id,
-                    'name' => $zone->name,
-                    'description' => $zone->description,
-                ],
-
-                'fee' => (float) $zone->fee,
-            ],
-        ]);
     }
 }
