@@ -604,7 +604,7 @@ class SalesService
                 ->validateSaleStock($sale);
 
             $this->inventoryService
-                ->issueSaleStock($sale, null);
+                ->issueSaleStock($sale);
 
 
             return $sale->fresh([

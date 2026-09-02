@@ -34,7 +34,7 @@ class InventoryService
     /**
      * Deduct stock for a completed sale.
      */
-    public function issueSaleStock(Sale $sale, ?int $userId = null): void
+    public function issueSaleStock(Sale $sale): void
     {
         foreach ($sale->items as $item) {
             $product = Product::lockForUpdate()
@@ -61,7 +61,6 @@ class InventoryService
                 'quantity'       => $item->quantity,
                 'reference_type' => Sale::class,
                 'reference_id'   => $sale->id,
-                'user_id'        => $userId ?? Auth::id(),
                 'description'    => "Sale {$sale->invoice_number}",
             ]);
         }
@@ -91,7 +90,6 @@ class InventoryService
                 'quantity'       => $item->quantity,
                 'reference_type' => Purchase::class,
                 'reference_id'   => $purchase->id,
-                'user_id'        => Auth::id(),
                 'description'    => "Purchase {$purchase->purchase_number}",
             ]);
         }
