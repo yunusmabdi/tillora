@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\DeliveryZone;
+use App\Models\Driver;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\StockMovement;
@@ -53,13 +54,12 @@ class SalesService
     /**
      * Create a customer order.
      *
-     * IMPORTANT:
-     *
-     * The order is created as Draft.
+     * Order starts as Draft.
      *
      * Payment has NOT been confirmed.
      *
-     * Stock is NOT deducted.
+     * Stock is NOT deducted until the first
+     * successful payment.
      */
     public function createCustomerOrder(
         int $customerId,
@@ -84,14 +84,12 @@ class SalesService
              */
 
             if (empty($items)) {
-
                 throw new RuntimeException(
                     'Your order must contain at least one item.'
                 );
             }
 
             if (trim($deliveryAddress) === '') {
-
                 throw new RuntimeException(
                     'A delivery address is required.'
                 );
@@ -102,12 +100,10 @@ class SalesService
                 ['full', 'advance'],
                 true
             )) {
-
                 throw new RuntimeException(
                     'Invalid payment option.'
                 );
             }
-
 
             /*
              * Validate delivery zone.
@@ -119,12 +115,10 @@ class SalesService
                 ->first();
 
             if (! $deliveryZone) {
-
                 throw new RuntimeException(
                     'The selected delivery zone is unavailable.'
                 );
             }
-
 
             /*
              * Calculate order totals.
@@ -135,16 +129,11 @@ class SalesService
 
             $saleItems = [];
 
-
             foreach ($items as $item) {
 
                 /*
-                 * Lock product row.
-                 *
-                 * This prevents two checkout requests from
-                 * changing the product while we're validating it.
+                 * Lock product while validating stock.
                  */
-
                 $product = Product::query()
                     ->whereKey($item['product_id'])
                     ->where('is_active', true)
@@ -152,64 +141,47 @@ class SalesService
                     ->first();
 
                 if (! $product) {
-
                     throw new RuntimeException(
                         'One of the selected products is unavailable.'
                     );
                 }
 
-
                 $quantity = (int) $item['quantity'];
 
                 if ($quantity < 1) {
-
                     throw new RuntimeException(
                         "Invalid quantity for {$product->name}."
                     );
                 }
 
-
                 /*
-                 * Validate stock.
+                 * Check stock.
                  *
-                 * IMPORTANT:
-                 *
-                 * We only CHECK stock here.
-                 *
-                 * We do NOT deduct it yet.
+                 * Stock is NOT deducted here.
                  */
-
                 if ($product->stock_quantity < $quantity) {
-
                     throw new RuntimeException(
                         "{$product->name} has only "
                         . "{$product->stock_quantity} item(s) in stock."
                     );
                 }
 
-
                 /*
                  * NEVER trust prices coming from Android.
                  */
+                $originalPrice = (float) $product->selling_price;
 
-                $originalPrice =
-                    (float) $product->selling_price;
-
-                $unitPrice =
-                    (float) $product->discounted_price;
-
+                $unitPrice = (float) $product->discounted_price;
 
                 $itemDiscount = max(
                     0,
                     $originalPrice - $unitPrice
                 );
 
-
                 $lineTotal = round(
                     $unitPrice * $quantity,
                     2
                 );
-
 
                 $subtotal += $lineTotal;
 
@@ -218,11 +190,13 @@ class SalesService
                     2
                 );
 
-
                 $saleItems[] = [
-                    'product_id' => $product->id,
 
-                    'quantity' => $quantity,
+                    'product_id' =>
+                        $product->id,
+
+                    'quantity' =>
+                        $quantity,
 
                     'original_price' =>
                         $originalPrice,
@@ -241,9 +215,8 @@ class SalesService
                 ];
             }
 
-
             /*
-             * Final totals.
+             * Round totals.
              */
 
             $subtotal = round(
@@ -256,23 +229,25 @@ class SalesService
                 2
             );
 
-
             /*
              * Tillora tax = 16%.
              */
-
             $tax = round(
                 $subtotal * 0.16,
                 2
             );
 
-
+            /*
+             * Delivery fee.
+             */
             $deliveryFee = round(
                 (float) $deliveryZone->fee,
                 2
             );
 
-
+            /*
+             * Final order total.
+             */
             $total = round(
                 $subtotal
                 + $tax
@@ -280,17 +255,15 @@ class SalesService
                 2
             );
 
-
             /*
-             * Determine required payment.
+             * Determine initial payment requirement.
              *
-             * FULL:
+             * full:
              * 100%
              *
-             * ADVANCE:
+             * advance:
              * 50%
              */
-
             $requiredPayment =
                 $paymentOption === 'full'
                     ? $total
@@ -299,21 +272,18 @@ class SalesService
                         2
                     );
 
-
             $balance = round(
                 $total - $requiredPayment,
                 2
             );
 
-
             /*
              * Create Draft order.
              *
-             * No payment has happened yet.
+             * Payment has not happened.
              *
-             * No stock has been deducted.
+             * Stock has not been deducted.
              */
-
             $sale = Sale::create([
 
                 'customer_id' =>
@@ -352,13 +322,6 @@ class SalesService
                 'total_amount' =>
                     $total,
 
-                /*
-                 * IMPORTANT:
-                 *
-                 * These remain zero until payment
-                 * is successfully confirmed.
-                 */
-
                 'amount_paid' =>
                     0,
 
@@ -384,18 +347,15 @@ class SalesService
                     $notes,
             ]);
 
-
             /*
              * Create sale items.
              */
-
             foreach ($saleItems as $item) {
 
                 $sale->items()->create(
                     $item
                 );
             }
-
 
             return $sale->fresh([
                 'customer',
@@ -407,15 +367,25 @@ class SalesService
 
     /*
     |--------------------------------------------------------------------------
-    | CONFIRM CUSTOMER PAYMENT
+    | CUSTOMER PAYMENT
     |--------------------------------------------------------------------------
     */
 
     /**
      * Confirm a successful customer payment.
      *
-     * This is the ONLY point where customer-order
-     * inventory is deducted.
+     * Inventory is issued ONLY ONCE.
+     *
+     * Example:
+     *
+     * First payment:
+     * 50%
+     *
+     * Second payment:
+     * remaining 50%
+     *
+     * Inventory is only deducted during the
+     * first successful payment.
      */
     public function confirmCustomerPayment(
         Sale $sale,
@@ -432,110 +402,126 @@ class SalesService
         ) {
 
             /*
-             * Lock order.
+             * Lock the order.
              */
-
             $sale = Sale::query()
                 ->lockForUpdate()
                 ->with('items.product')
                 ->findOrFail($sale->id);
-
 
             /*
              * Validate order state.
              */
 
             if ($sale->payment_status === 'paid') {
-
                 throw new RuntimeException(
                     'This order has already been fully paid.'
                 );
             }
 
-
             if (
                 $sale->fulfillment_status ===
                 'cancelled'
             ) {
-
                 throw new RuntimeException(
                     'A cancelled order cannot receive payment.'
                 );
             }
 
+            if (
+                $sale->fulfillment_status ===
+                'delivered'
+            ) {
+                throw new RuntimeException(
+                    'A delivered order cannot receive payment.'
+                );
+            }
 
             /*
              * Validate payment amount.
              */
 
             if ($amountPaid <= 0) {
-
                 throw new RuntimeException(
                     'Payment amount must be greater than zero.'
                 );
             }
 
-
             /*
              * Validate payment method.
              */
+
+            $paymentMethod =
+                strtolower(
+                    trim($paymentMethod)
+                );
 
             if (! in_array(
                 $paymentMethod,
                 ['mpesa', 'card'],
                 true
             )) {
-
                 throw new RuntimeException(
                     'Invalid payment method.'
                 );
             }
 
-
             /*
-             * Transaction reference is mandatory.
+             * Transaction reference required.
              */
 
-            if (
+            $transactionReference =
                 trim(
                     (string) $transactionReference
-                ) === ''
-            ) {
+                );
 
+            if ($transactionReference === '') {
                 throw new RuntimeException(
                     'A payment transaction reference is required.'
                 );
             }
 
-
             /*
-             * Calculate new payment total.
+             * Existing payment.
              */
 
-            $alreadyPaid =
-                (float) $sale->amount_paid;
-
-
-            $newAmountPaid = round(
-                $alreadyPaid + $amountPaid,
+            $alreadyPaid = round(
+                (float) $sale->amount_paid,
                 2
             );
 
+            /*
+             * Remaining balance before this payment.
+             */
+
+            $remainingBalance = round(
+                (float) $sale->total_amount
+                - $alreadyPaid,
+                2
+            );
 
             /*
              * Prevent overpayment.
              */
 
             if (
-                $newAmountPaid >
-                (float) $sale->total_amount
+                $amountPaid >
+                $remainingBalance
             ) {
-
                 throw new RuntimeException(
-                    'Payment cannot exceed the order total.'
+                    'Payment cannot exceed the remaining order balance.'
                 );
             }
 
+            /*
+             * Calculate new totals.
+             */
+
+            $newAmountPaid = round(
+                $alreadyPaid
+                + $amountPaid,
+                2
+            );
 
             $balance = round(
                 (float) $sale->total_amount
@@ -543,12 +529,23 @@ class SalesService
                 2
             );
 
+            /*
+             * Determine payment status.
+             */
 
             $paymentStatus =
                 $balance <= 0
                     ? 'paid'
                     : 'partially_paid';
 
+            /*
+             * Preserve the first payment
+             * as the advance amount.
+             */
+            $advanceAmount =
+                $alreadyPaid > 0
+                    ? (float) $sale->advance_amount
+                    : $amountPaid;
 
             /*
              * Update payment.
@@ -566,19 +563,13 @@ class SalesService
                     strtoupper($paymentMethod),
 
                 'transaction_reference' =>
-                    trim($transactionReference),
+                    $transactionReference,
 
                 'amount_paid' =>
                     $newAmountPaid,
 
-                /*
-                 * First payment is the advance.
-                 */
-
                 'advance_amount' =>
-                    $alreadyPaid > 0
-                        ? $alreadyPaid
-                        : $amountPaid,
+                    $advanceAmount,
 
                 'balance_amount' =>
                     $balance,
@@ -587,32 +578,69 @@ class SalesService
                     0,
 
                 /*
-                 * Successful payment starts
-                 * fulfillment.
+                 * First successful payment
+                 * starts preparation.
+                 *
+                 * Do not reset an order already
+                 * being processed.
                  */
-
                 'fulfillment_status' =>
-                    'preparing',
+                    $sale->fulfillment_status === 'pending'
+                        ? 'preparing'
+                        : $sale->fulfillment_status,
             ]);
 
-
             /*
-             * NOW deduct inventory.
+             * CRITICAL:
+             *
+             * Deduct stock only once.
              */
+            if (! $this->stockHasBeenIssued($sale)) {
 
-            $this->inventoryService
-                ->validateSaleStock($sale);
+                $this->inventoryService
+                    ->validateSaleStock($sale);
 
-            $this->inventoryService
-                ->issueSaleStock($sale);
-
+                $this->inventoryService
+                    ->issueSaleStock($sale);
+            }
 
             return $sale->fresh([
                 'customer',
                 'items.product',
                 'deliveryZone',
+                'driver',
             ]);
         });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | STOCK
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Determine whether stock has already
+     * been issued for this sale.
+     */
+    protected function stockHasBeenIssued(
+        Sale $sale
+    ): bool {
+
+        return StockMovement::query()
+            ->where(
+                'reference_type',
+                Sale::class
+            )
+            ->where(
+                'reference_id',
+                $sale->id
+            )
+            ->where(
+                'type',
+                'OUT'
+            )
+            ->exists();
     }
 
     /*
@@ -634,48 +662,57 @@ class SalesService
                 ->lockForUpdate()
                 ->findOrFail($sale->id);
 
-
-            if ($sale->payment_status === 'paid') {
-
+            if (
+                $sale->payment_status ===
+                'paid'
+            ) {
                 throw new RuntimeException(
                     'A paid order cannot be marked as failed.'
                 );
             }
 
+            if (
+                $sale->fulfillment_status ===
+                'cancelled'
+            ) {
+                throw new RuntimeException(
+                    'A cancelled order cannot have a payment attempt.'
+                );
+            }
 
             $sale->update([
                 'payment_status' => 'failed',
             ]);
 
-
             return $sale->fresh([
                 'customer',
                 'items.product',
                 'deliveryZone',
+                'driver',
             ]);
         });
     }
 
     /*
     |--------------------------------------------------------------------------
-    | FULFILLMENT
+    | ADMIN FULFILLMENT
     |--------------------------------------------------------------------------
     */
 
     /**
-     * Update fulfillment status.
+     * Update fulfillment status from the
+     * administrative side.
      *
-     * Flow:
+     * ADMIN FLOW:
      *
      * pending
      *     ↓
      * preparing
      *     ↓
      * ready
-     *     ↓
-     * out_for_delivery
-     *     ↓
-     * delivered
+     *
+     * Rider-controlled statuses cannot be
+     * changed through this method.
      */
     public function updateFulfillmentStatus(
         Sale $sale,
@@ -687,20 +724,22 @@ class SalesService
             $status,
         ) {
 
+            /*
+             * Lock order.
+             */
             $sale = Sale::query()
                 ->lockForUpdate()
+                ->with('driver')
                 ->findOrFail($sale->id);
 
-
+            /*
+             * Admin-controlled statuses only.
+             */
             $allowedStatuses = [
                 'pending',
                 'preparing',
                 'ready',
-                'out_for_delivery',
-                'delivered',
-                'cancelled',
             ];
-
 
             if (! in_array(
                 $status,
@@ -709,38 +748,34 @@ class SalesService
             )) {
 
                 throw new RuntimeException(
-                    'Invalid order status.'
+                    'This status can only be controlled by the assigned rider.'
                 );
             }
 
-
-            if (
-                in_array(
-                    $sale->fulfillment_status,
-                    [
-                        'delivered',
-                        'cancelled',
-                    ],
-                    true
-                )
-            ) {
+            /*
+             * Final states cannot be changed.
+             */
+            if (in_array(
+                $sale->fulfillment_status,
+                [
+                    'delivered',
+                    'cancelled',
+                ],
+                true
+            )) {
 
                 throw new RuntimeException(
                     'This order can no longer be changed.'
                 );
             }
 
-
-            if ($status === 'cancelled') {
-
-                throw new RuntimeException(
-                    'Use the Cancel Order action to cancel this order.'
-                );
-            }
-
-
+            /*
+             * Validate admin transition.
+             */
             $validTransition =
-                match ($sale->fulfillment_status) {
+                match (
+                    $sale->fulfillment_status
+                ) {
 
                     'pending' =>
                         $status === 'preparing',
@@ -748,16 +783,9 @@ class SalesService
                     'preparing' =>
                         $status === 'ready',
 
-                    'ready' =>
-                        $status === 'out_for_delivery',
-
-                    'out_for_delivery' =>
-                        $status === 'delivered',
-
                     default =>
                         false,
                 };
-
 
             if (! $validTransition) {
 
@@ -766,17 +794,399 @@ class SalesService
                 );
             }
 
-
+            /*
+             * Update order.
+             */
             $sale->update([
                 'fulfillment_status' =>
                     $status,
             ]);
 
+            return $sale->fresh([
+                'customer',
+                'items.product',
+                'deliveryZone',
+                'driver',
+            ]);
+        });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | RIDER ASSIGNMENT
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Assign an available rider to a ready order.
+     *
+     * Rider becomes busy immediately.
+     */
+    public function assignDriver(
+        Sale $sale,
+        int $driverId,
+    ): Sale {
+
+        return DB::transaction(function () use (
+            $sale,
+            $driverId,
+        ) {
+
+            /*
+             * Lock the order.
+             */
+            $sale = Sale::query()
+                ->lockForUpdate()
+                ->with('driver')
+                ->findOrFail($sale->id);
+
+            /*
+             * Order must be ready.
+             */
+            if (
+                $sale->fulfillment_status !==
+                'ready'
+            ) {
+
+                throw new RuntimeException(
+                    'A rider can only be assigned when the order is ready.'
+                );
+            }
+
+            /*
+             * Prevent duplicate assignment.
+             */
+            if ($sale->driver_id) {
+
+                throw new RuntimeException(
+                    'A rider is already assigned to this order.'
+                );
+            }
+
+            /*
+             * Lock rider.
+             */
+            $driver = Driver::query()
+                ->lockForUpdate()
+                ->find($driverId);
+
+            if (! $driver) {
+
+                throw new RuntimeException(
+                    'The selected rider does not exist.'
+                );
+            }
+
+            /*
+             * Rider must be available.
+             */
+            if (
+                $driver->status !==
+                'available'
+            ) {
+
+                throw new RuntimeException(
+                    'The selected rider is not available.'
+                );
+            }
+
+            /*
+             * Assign rider.
+             */
+            $sale->update([
+                'driver_id' =>
+                    $driver->id,
+            ]);
+
+            /*
+             * Rider becomes busy.
+             */
+            $driver->update([
+                'status' =>
+                    'busy',
+            ]);
 
             return $sale->fresh([
                 'customer',
                 'items.product',
                 'deliveryZone',
+                'driver',
+            ]);
+        });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | RIDER PICKUP
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Rider picks up an assigned order.
+     *
+     * READY
+     *   ↓
+     * PICKED UP
+     */
+    public function riderPickupOrder(
+        Sale $sale,
+        Driver $driver,
+    ): Sale {
+
+        return DB::transaction(function () use (
+            $sale,
+            $driver,
+        ) {
+
+            /*
+             * Lock order.
+             */
+            $sale = Sale::query()
+                ->lockForUpdate()
+                ->with('driver')
+                ->findOrFail($sale->id);
+
+            /*
+             * Verify rider assignment.
+             */
+            if (
+                $sale->driver_id !==
+                $driver->id
+            ) {
+
+                throw new RuntimeException(
+                    'This order is not assigned to you.'
+                );
+            }
+
+            /*
+             * Order must be ready.
+             */
+            if (
+                $sale->fulfillment_status !==
+                'ready'
+            ) {
+
+                throw new RuntimeException(
+                    'This order is not ready for pickup.'
+                );
+            }
+
+            /*
+             * Rider must be busy.
+             */
+            if (
+                $driver->status !==
+                'busy'
+            ) {
+
+                throw new RuntimeException(
+                    'You are not currently assigned to an active delivery.'
+                );
+            }
+
+            /*
+             * Update status.
+             */
+            $sale->update([
+                'fulfillment_status' =>
+                    'picked_up',
+            ]);
+
+            return $sale->fresh([
+                'customer',
+                'items.product',
+                'deliveryZone',
+                'driver',
+            ]);
+        });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | RIDER START DELIVERY
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Rider starts delivery.
+     *
+     * PICKED UP
+     *     ↓
+     * OUT FOR DELIVERY
+     */
+    public function riderStartDelivery(
+        Sale $sale,
+        Driver $driver,
+    ): Sale {
+
+        return DB::transaction(function () use (
+            $sale,
+            $driver,
+        ) {
+
+            /*
+             * Lock order.
+             */
+            $sale = Sale::query()
+                ->lockForUpdate()
+                ->with('driver')
+                ->findOrFail($sale->id);
+
+            /*
+             * Verify rider assignment.
+             */
+            if (
+                $sale->driver_id !==
+                $driver->id
+            ) {
+
+                throw new RuntimeException(
+                    'This order is not assigned to you.'
+                );
+            }
+
+            /*
+             * Must be picked up first.
+             */
+            if (
+                $sale->fulfillment_status !==
+                'picked_up'
+            ) {
+
+                throw new RuntimeException(
+                    'The order must be picked up before starting delivery.'
+                );
+            }
+
+            /*
+             * Rider must still be busy.
+             */
+            if (
+                $driver->status !==
+                'busy'
+            ) {
+
+                throw new RuntimeException(
+                    'You are not currently assigned to an active delivery.'
+                );
+            }
+
+            /*
+             * Update status.
+             */
+            $sale->update([
+                'fulfillment_status' =>
+                    'out_for_delivery',
+            ]);
+
+            return $sale->fresh([
+                'customer',
+                'items.product',
+                'deliveryZone',
+                'driver',
+            ]);
+        });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | RIDER DELIVERY
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Complete delivery.
+     *
+     * OUT FOR DELIVERY
+     *        ↓
+     *     DELIVERED
+     *
+     * Full payment is mandatory.
+     */
+    public function riderDeliverOrder(
+        Sale $sale,
+        Driver $driver,
+    ): Sale {
+
+        return DB::transaction(function () use (
+            $sale,
+            $driver,
+        ) {
+
+            /*
+             * Lock order.
+             */
+            $sale = Sale::query()
+                ->lockForUpdate()
+                ->with('driver')
+                ->findOrFail($sale->id);
+
+            /*
+             * Verify rider assignment.
+             */
+            if (
+                $sale->driver_id !==
+                $driver->id
+            ) {
+
+                throw new RuntimeException(
+                    'This order is not assigned to you.'
+                );
+            }
+
+            /*
+             * Must be out for delivery.
+             */
+            if (
+                $sale->fulfillment_status !==
+                'out_for_delivery'
+            ) {
+
+                throw new RuntimeException(
+                    'This order is not currently out for delivery.'
+                );
+            }
+
+            /*
+             * CRITICAL PAYMENT RULE.
+             *
+             * Delivery cannot be completed
+             * while there is an outstanding balance.
+             */
+            if (
+                $sale->payment_status !==
+                'paid'
+                ||
+                (float) $sale->balance_amount > 0
+            ) {
+
+                throw new RuntimeException(
+                    'This order cannot be delivered until the full payment has been received.'
+                );
+            }
+
+            /*
+             * Mark delivered.
+             */
+            $sale->update([
+                'fulfillment_status' =>
+                    'delivered',
+            ]);
+
+            /*
+             * Rider becomes available again.
+             */
+            $driver->update([
+                'status' =>
+                    'available',
+            ]);
+
+            return $sale->fresh([
+                'customer',
+                'items.product',
+                'deliveryZone',
+                'driver',
             ]);
         });
     }
@@ -789,6 +1199,9 @@ class SalesService
 
     /**
      * Cancel an order and restore inventory.
+     *
+     * If a rider was assigned, the rider
+     * becomes available again.
      */
     public function cancelSale(
         Sale $sale,
@@ -800,11 +1213,17 @@ class SalesService
             $reason,
         ) {
 
+            /*
+             * Lock order.
+             */
             $sale = Sale::query()
                 ->lockForUpdate()
+                ->with('driver')
                 ->findOrFail($sale->id);
 
-
+            /*
+             * Already cancelled.
+             */
             if (
                 $sale->fulfillment_status ===
                 'cancelled'
@@ -815,7 +1234,9 @@ class SalesService
                 );
             }
 
-
+            /*
+             * Delivered orders cannot be cancelled.
+             */
             if (
                 $sale->fulfillment_status ===
                 'delivered'
@@ -826,11 +1247,12 @@ class SalesService
                 );
             }
 
-
+            /*
+             * Cancellation reason required.
+             */
             $reason = trim(
                 (string) $reason
             );
-
 
             if ($reason === '') {
 
@@ -839,10 +1261,14 @@ class SalesService
                 );
             }
 
-
+            /*
+             * Load items.
+             */
             $sale->loadMissing('items');
 
-
+            /*
+             * Restore stock only if it was issued.
+             */
             foreach ($sale->items as $item) {
 
                 $issuedQuantity =
@@ -865,22 +1291,30 @@ class SalesService
                         )
                         ->sum('quantity');
 
-
+                /*
+                 * No stock was issued.
+                 */
                 if ($issuedQuantity <= 0) {
                     continue;
                 }
 
-
+                /*
+                 * Never restore more than
+                 * the original ordered quantity.
+                 */
                 $restoreQuantity = min(
                     $issuedQuantity,
                     (int) $item->quantity
                 );
 
-
+                /*
+                 * Lock product.
+                 */
                 $product = Product::query()
                     ->lockForUpdate()
-                    ->find($item->product_id);
-
+                    ->find(
+                        $item->product_id
+                    );
 
                 if (! $product) {
 
@@ -889,7 +1323,9 @@ class SalesService
                     );
                 }
 
-
+                /*
+                 * Restore inventory.
+                 */
                 Product::query()
                     ->whereKey($product->id)
                     ->increment(
@@ -897,7 +1333,9 @@ class SalesService
                         $restoreQuantity
                     );
 
-
+                /*
+                 * Record stock movement.
+                 */
                 StockMovement::create([
 
                     'product_id' =>
@@ -925,7 +1363,9 @@ class SalesService
                 ]);
             }
 
-
+            /*
+             * Cancel order.
+             */
             $sale->update([
 
                 'fulfillment_status' =>
@@ -938,11 +1378,22 @@ class SalesService
                     $reason,
             ]);
 
+            /*
+             * Release rider.
+             */
+            if ($sale->driver) {
+
+                $sale->driver->update([
+                    'status' =>
+                        'available',
+                ]);
+            }
 
             return $sale->fresh([
                 'customer',
                 'items.product',
                 'deliveryZone',
+                'driver',
             ]);
         });
     }

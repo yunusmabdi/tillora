@@ -24,6 +24,11 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasRole('Admin');
     }
 
+    public function driver()
+    {
+        return $this->hasOne(Driver::class);
+    }
+
     protected function casts(): array
     {
         return [

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Sales\Schemas;
 
+use App\Models\Driver;
 use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -28,6 +29,21 @@ class SaleForm
                             ])
                             ->required()
                             ->native(false),
+                    ])
+                    ->columnSpanFull(),
+
+                Section::make('Delivery Assignment')
+                    ->description('Assign a rider to this order.')
+                    ->schema([
+                        Select::make('driver_id')
+                            ->label('Rider')
+                            ->relationship(
+                                name: 'driver',
+                                titleAttribute: 'name'
+                            )
+                            ->searchable()
+                            ->preload()
+                            ->placeholder('Select a rider'),
                     ])
                     ->columnSpanFull(),
             ]);
