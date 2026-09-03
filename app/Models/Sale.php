@@ -153,4 +153,9 @@ class Sale extends Model
             'delivery_fee' => 'decimal:2',
         ];
     }
+
+    public function driver(): BelongsTo
+    {
+        return $this->belongsTo(Driver::class);
+    }
 }
