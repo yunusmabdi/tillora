@@ -4,7 +4,6 @@ namespace App\Filament\Resources\RolePermissions\Pages;
 
 use App\Filament\Resources\RolePermissions\RolePermissionResource;
 use Filament\Resources\Pages\CreateRecord;
-use Spatie\Permission\Models\Permission;
 
 class CreateRolePermission extends CreateRecord
 {
@@ -12,19 +11,21 @@ class CreateRolePermission extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        unset($data['permission_ids']);
+        unset($data['permissions']);
 
         return $data;
     }
 
     protected function afterCreate(): void
     {
-        $permissionIds = $this->data['permission_ids'] ?? [];
+        $permissions = $this->form->getState()['permissions'] ?? [];
 
-        $permissions = Permission::query()
-            ->whereIn('id', $permissionIds)
-            ->get();
+        $selectedPermissions = collect($permissions)
+            ->flatten()
+            ->filter()
+            ->values()
+            ->all();
 
-        $this->record->syncPermissions($permissions);
+        $this->record->syncPermissions($selectedPermissions);
     }
 }

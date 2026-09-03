@@ -2,9 +2,6 @@
 
 namespace App\Filament\Resources\RolePermissions\Tables;
 
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -23,31 +20,34 @@ class RolePermissionsTable
                     ->label('Guard')
                     ->badge(),
 
-                TextColumn::make('permissions_count')
+                TextColumn::make('permissions.name')
                     ->label('Permissions')
-                    ->counts('permissions')
                     ->badge()
+                    ->separator(',')
+                    ->wrap()
+                    ->limitList(8)
+                    ->expandableLimitedList(),
+
+                TextColumn::make('permissions_count')
+                    ->counts('permissions')
+                    ->label('Permissions')
                     ->sortable(),
 
                 TextColumn::make('created_at')
                     ->label('Created')
                     ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                TextColumn::make('updated_at')
-                    ->label('Updated')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->sortable(),
             ])
-            ->defaultSort('name')
+            ->filters([
+                //
+            ])
             ->actions([
-                EditAction::make(),
+                \Filament\Actions\EditAction::make(),
+                \Filament\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                \Filament\Actions\BulkActionGroup::make([
+                    \Filament\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

@@ -5,9 +5,11 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CustomerAuthController;
+use App\Http\Controllers\Api\DriverAuthController;
 use App\Http\Controllers\Api\DeliveryZoneController;
 use App\Http\Controllers\Api\DeliveryController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\RiderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,10 +17,7 @@ use App\Http\Controllers\Api\OrderController;
 |--------------------------------------------------------------------------
 */
 
-Route::apiResource(
-    'products',
-    ProductController::class
-);
+Route::apiResource('products', ProductController::class);
 
 Route::get(
     'categories',
@@ -75,11 +74,23 @@ Route::post(
 
 /*
 |--------------------------------------------------------------------------
+| DRIVER AUTHENTICATION
+|--------------------------------------------------------------------------
+*/
+
+Route::post(
+    'driver/login',
+    [DriverAuthController::class, 'login']
+);
+
+
+/*
+|--------------------------------------------------------------------------
 | PROTECTED CUSTOMER ROUTES
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(\Illuminate\Auth\Middleware\Authenticate::class . ':sanctum')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
@@ -137,6 +148,84 @@ Route::middleware('auth:sanctum')->group(function () {
     );
 
     Route::get(
-        '/delivery-zones', 
-        [OrderController::class, 'deliveryZones']);
+        'delivery-zones',
+        [OrderController::class, 'deliveryZones']
+    );
 });
+
+
+/*
+|--------------------------------------------------------------------------
+| DRIVER API
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(\Illuminate\Auth\Middleware\Authenticate::class . ':sanctum')
+    ->prefix('driver')
+    ->group(function () {
+
+        /*
+        |--------------------------------------------------------------------------
+        | Driver Profile
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            'me',
+            [RiderController::class, 'me']
+        );
+
+        Route::post(
+            'logout',
+            [DriverAuthController::class, 'logout']
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Assigned Orders
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            'orders',
+            [RiderController::class, 'orders']
+        );
+
+        Route::get(
+            'orders/{sale}',
+            [RiderController::class, 'show']
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Delivery Workflow
+        |--------------------------------------------------------------------------
+        */
+
+        Route::post(
+            'orders/{sale}/pickup',
+            [RiderController::class, 'pickup']
+        );
+
+        Route::post(
+            'orders/{sale}/start-delivery',
+            [RiderController::class, 'startDelivery']
+        );
+
+        Route::post(
+            'orders/{sale}/deliver',
+            [RiderController::class, 'deliver']
+        );
+
+        Route::get(
+            'notifications',
+            [RiderController::class, 'notifications']
+        );
+
+        Route::get(
+            'notifications/unread',
+            [RiderController::class, 'unreadNotifications']
+        );
+    });

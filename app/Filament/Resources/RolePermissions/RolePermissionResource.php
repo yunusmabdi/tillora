@@ -13,6 +13,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Spatie\Permission\Models\Role;
+use UnitEnum;
 
 class RolePermissionResource extends Resource
 {
@@ -20,6 +21,8 @@ class RolePermissionResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon =
         Heroicon::OutlinedShieldCheck;
+
+    protected static UnitEnum|string|null $navigationGroup = 'Administration';
 
     protected static ?string $navigationLabel = 'Roles & Permissions';
 

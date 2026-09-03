@@ -40,6 +40,7 @@ class Sale extends Model
         'delivery_zone_id',
         'delivery_address',
         'delivery_fee',
+        'driver_id',
 
         'notes',
     ];

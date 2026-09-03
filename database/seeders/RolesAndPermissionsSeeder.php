@@ -13,6 +13,12 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
+        /*
+        |--------------------------------------------------------------------------
+        | Permissions
+        |--------------------------------------------------------------------------
+        */
+
         $permissions = [
 
             /*
@@ -50,47 +56,6 @@ class RolesAndPermissionsSeeder extends Seeder
 
             /*
             |--------------------------------------------------------------------------
-            | Orders
-            |--------------------------------------------------------------------------
-            */
-            'view orders',
-            'view any orders',
-            'create orders',
-            'update orders',
-            'delete orders',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Order Fulfillment
-            |--------------------------------------------------------------------------
-            */
-            'prepare orders',
-            'mark orders ready',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Rider Delivery
-            |--------------------------------------------------------------------------
-            */
-            'view assigned orders',
-            'accept orders',
-            'pickup orders',
-            'start delivery',
-            'deliver orders',
-
-            /*
-            |--------------------------------------------------------------------------
-            | Riders
-            |--------------------------------------------------------------------------
-            */
-            'view riders',
-            'view any riders',
-            'create riders',
-            'update riders',
-            'delete riders',
-
-            /*
-            |--------------------------------------------------------------------------
             | Products
             |--------------------------------------------------------------------------
             */
@@ -113,11 +78,91 @@ class RolesAndPermissionsSeeder extends Seeder
 
             /*
             |--------------------------------------------------------------------------
+            | Orders
+            |--------------------------------------------------------------------------
+            */
+            'view orders',
+            'view any orders',
+            'create orders',
+            'update orders',
+            'delete orders',
+
+            /*
+            |--------------------------------------------------------------------------
+            | Order Fulfillment
+            |--------------------------------------------------------------------------
+            */
+            'prepare orders',
+            'mark orders ready',
+
+            /*
+            |--------------------------------------------------------------------------
+            | Inventory
+            |--------------------------------------------------------------------------
+            */
+            'view inventory',
+            'adjust stock',
+            'transfer stock',
+            'manage stock',
+
+            /*
+            |--------------------------------------------------------------------------
+            | Purchasing
+            |--------------------------------------------------------------------------
+            */
+            'view purchases',
+            'view any purchases',
+            'create purchases',
+            'update purchases',
+            'approve purchases',
+
+            /*
+            |--------------------------------------------------------------------------
+            | Delivery Zones
+            |--------------------------------------------------------------------------
+            */
+            'view delivery zones',
+            'view any delivery zones',
+            'create delivery zones',
+            'update delivery zones',
+            'delete delivery zones',
+
+            /*
+            |--------------------------------------------------------------------------
+            | Drivers
+            |--------------------------------------------------------------------------
+            */
+            'view drivers',
+            'view any drivers',
+            'create drivers',
+            'update drivers',
+            'delete drivers',
+            'assign orders to drivers',
+
+            /*
+            |--------------------------------------------------------------------------
+            | Driver Delivery
+            |--------------------------------------------------------------------------
+            */
+            'view assigned orders',
+            'accept orders',
+            'pickup orders',
+            'start delivery',
+            'deliver orders',
+
+            /*
+            |--------------------------------------------------------------------------
             | POS
             |--------------------------------------------------------------------------
             */
             'access pos',
         ];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Create Permissions
+        |--------------------------------------------------------------------------
+        */
 
         foreach ($permissions as $permission) {
             Permission::firstOrCreate([
@@ -152,8 +197,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'guard_name' => 'web',
         ]);
 
-        $rider = Role::firstOrCreate([
-            'name' => 'Rider',
+        $driver = Role::firstOrCreate([
+            'name' => 'Driver',
             'guard_name' => 'web',
         ]);
 
@@ -161,9 +206,6 @@ class RolesAndPermissionsSeeder extends Seeder
         |--------------------------------------------------------------------------
         | SUPER ADMIN
         |--------------------------------------------------------------------------
-        |
-        | Super Admin gets absolutely everything.
-        |
         */
 
         $superAdmin->syncPermissions(
@@ -177,51 +219,81 @@ class RolesAndPermissionsSeeder extends Seeder
         */
 
         $admin->syncPermissions([
+            // Users
             'view users',
             'view any users',
             'create users',
             'update users',
             'delete users',
 
+            // Roles
             'view roles',
             'view any roles',
             'create roles',
             'update roles',
             'delete roles',
 
+            // Permissions
             'view permissions',
             'view any permissions',
             'create permissions',
             'update permissions',
             'delete permissions',
 
-            'view orders',
-            'view any orders',
-            'create orders',
-            'update orders',
-            'delete orders',
-
-            'prepare orders',
-            'mark orders ready',
-
-            'view riders',
-            'view any riders',
-            'create riders',
-            'update riders',
-            'delete riders',
-
+            // Products
             'view products',
             'view any products',
             'create products',
             'update products',
             'delete products',
 
+            // Customers
             'view customers',
             'view any customers',
             'create customers',
             'update customers',
             'delete customers',
 
+            // Orders
+            'view orders',
+            'view any orders',
+            'create orders',
+            'update orders',
+            'delete orders',
+
+            // Fulfillment
+            'prepare orders',
+            'mark orders ready',
+
+            // Inventory
+            'view inventory',
+            'adjust stock',
+            'transfer stock',
+            'manage stock',
+
+            // Purchasing
+            'view purchases',
+            'view any purchases',
+            'create purchases',
+            'update purchases',
+            'approve purchases',
+
+            // Delivery Zones
+            'view delivery zones',
+            'view any delivery zones',
+            'create delivery zones',
+            'update delivery zones',
+            'delete delivery zones',
+
+            // Drivers
+            'view drivers',
+            'view any drivers',
+            'create drivers',
+            'update drivers',
+            'delete drivers',
+            'assign orders to drivers',
+
+            // POS
             'access pos',
         ]);
 
@@ -232,30 +304,51 @@ class RolesAndPermissionsSeeder extends Seeder
         */
 
         $manager->syncPermissions([
-            'view users',
-            'view any users',
-
-            'view orders',
-            'view any orders',
-            'create orders',
-            'update orders',
-
-            'prepare orders',
-            'mark orders ready',
-
-            'view riders',
-            'view any riders',
-
+            // Products
             'view products',
             'view any products',
             'create products',
             'update products',
 
+            // Customers
             'view customers',
             'view any customers',
             'create customers',
             'update customers',
 
+            // Orders
+            'view orders',
+            'view any orders',
+            'create orders',
+            'update orders',
+
+            // Fulfillment
+            'prepare orders',
+            'mark orders ready',
+
+            // Inventory
+            'view inventory',
+            'adjust stock',
+            'transfer stock',
+            'manage stock',
+
+            // Purchasing
+            'view purchases',
+            'view any purchases',
+            'create purchases',
+            'update purchases',
+            'approve purchases',
+
+            // Delivery Zones
+            'view delivery zones',
+            'view any delivery zones',
+
+            // Drivers
+            'view drivers',
+            'view any drivers',
+            'assign orders to drivers',
+
+            // POS
             'access pos',
         ]);
 
@@ -266,26 +359,33 @@ class RolesAndPermissionsSeeder extends Seeder
         */
 
         $cashier->syncPermissions([
-            'view orders',
-            'view any orders',
-            'create orders',
-            'update orders',
+            // Products
+            'view products',
+            'view any products',
 
+            // Customers
             'view customers',
             'view any customers',
             'create customers',
             'update customers',
 
+            // Orders
+            'view orders',
+            'view any orders',
+            'create orders',
+            'update orders',
+
+            // POS
             'access pos',
         ]);
 
         /*
         |--------------------------------------------------------------------------
-        | RIDER
+        | DRIVER
         |--------------------------------------------------------------------------
         */
 
-        $rider->syncPermissions([
+        $driver->syncPermissions([
             'view assigned orders',
             'accept orders',
             'pickup orders',

@@ -7,6 +7,7 @@ use App\Filament\Resources\Sales\Schemas\SaleForm;
 use App\Filament\Resources\Sales\Tables\SalesTable;
 use App\Models\Sale;
 use BackedEnum;
+use Illuminate\Support\Facades\Auth;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -59,5 +60,14 @@ class SaleResource extends Resource
     public static function infolist(Schema $schema): Schema
     {
         return SaleInfolist::configure($schema);
+    }
+    public static function canViewAny(): bool
+    {
+        return Auth::user()?->hasAnyRole([
+            'Super Admin',
+            'Admin',
+            'Manager',
+            'Cashier',
+        ]);
     }
 }

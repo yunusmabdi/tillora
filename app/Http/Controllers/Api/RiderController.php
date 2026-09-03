@@ -266,4 +266,38 @@ class RiderController extends Controller
             'This order is not assigned to you.'
         );
     }
+    public function me(Request $request): JsonResponse
+    {
+        $driver = $this->getAuthenticatedDriver($request);
+
+        $driver->load('user');
+
+        return response()->json([
+            'success' => true,
+            'data' => $driver,
+        ]);
+    }
+    public function notifications(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        return response()->json([
+            'success' => true,
+            'data' => $user->notifications()
+                ->latest()
+                ->get(),
+        ]);
+    }
+
+    public function unreadNotifications(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        return response()->json([
+            'success' => true,
+            'data' => $user->unreadNotifications()
+                ->latest()
+                ->get(),
+        ]);
+    }
 }

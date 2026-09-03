@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Driver extends Model
 {
     protected $fillable = [
+        'user_id',
         'name',
         'phone',
         'email',

@@ -28,7 +28,7 @@ class DeliveryZoneResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Delivery Zones';
 
-    protected static UnitEnum|string|null $navigationGroup = 'Sales';
+    protected static UnitEnum|string|null $navigationGroup = 'Delivery';
     protected static ?int $navigationSort = 20;
 
     protected static ?string $recordTitleAttribute = 'name';

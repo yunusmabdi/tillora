@@ -3,9 +3,8 @@
 namespace App\Filament\Resources\Drivers\Schemas;
 
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Schema;
 
 class DriverForm
@@ -14,57 +13,50 @@ class DriverForm
     {
         return $schema
             ->components([
-                Section::make('Driver Information')
-                    ->schema([
-                        TextInput::make('name')
-                            ->label('Full Name')
-                            ->required()
-                            ->maxLength(255),
+                TextInput::make('name')
+                    ->required()
+                    ->maxLength(255),
 
-                        TextInput::make('phone')
-                            ->label('Phone Number')
-                            ->required()
-                            ->tel()
-                            ->unique(ignoreRecord: true),
+                TextInput::make('phone')
+                    ->tel()
+                    ->required()
+                    ->maxLength(50),
 
-                        TextInput::make('email')
-                            ->label('Email Address')
-                            ->email()
-                            ->unique(ignoreRecord: true),
+                TextInput::make('email')
+                    ->email()
+                    ->required()
+                    ->maxLength(255),
 
-                        Select::make('status')
-                            ->options([
-                                'available' => 'Available',
-                                'busy' => 'Busy',
-                                'inactive' => 'Inactive',
-                            ])
-                            ->default('available')
-                            ->required(),
+                Select::make('vehicle_type')
+                    ->options([
+                        'motorbike' => 'Motorbike',
+                        'car' => 'Car',
+                        'van' => 'Van',
+                        'truck' => 'Truck',
                     ])
-                    ->columns(2),
+                    ->required(),
 
-                Section::make('Vehicle Information')
-                    ->schema([
-                        TextInput::make('vehicle_type')
-                            ->label('Vehicle Type')
-                            ->placeholder('Motorbike, Car, Van...'),
+                TextInput::make('vehicle_number')
+                    ->label('Vehicle Number')
+                    ->required()
+                    ->maxLength(50),
 
-                        TextInput::make('vehicle_number')
-                            ->label('Vehicle Registration')
-                            ->placeholder('KDA 123A'),
+                Select::make('status')
+                    ->options([
+                        'available' => 'Available',
+                        'busy' => 'Busy',
+                        'inactive' => 'Inactive',
                     ])
-                    ->columns(2),
+                    ->default('available')
+                    ->required(),
 
-                Section::make('Additional Information')
-                    ->schema([
-                        Textarea::make('address')
-                            ->label('Address')
-                            ->rows(3),
+                Textarea::make('address')
+                    ->rows(3)
+                    ->columnSpanFull(),
 
-                        Textarea::make('notes')
-                            ->label('Notes')
-                            ->rows(3),
-                    ]),
+                Textarea::make('notes')
+                    ->rows(3)
+                    ->columnSpanFull(),
             ]);
     }
 }

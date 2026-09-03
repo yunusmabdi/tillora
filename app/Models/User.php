@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
+use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable([
     'name',
@@ -26,10 +27,17 @@ class User extends Authenticatable implements FilamentUser
     use HasFactory;
     use Notifiable;
     use HasRoles;
+    use HasApiTokens;
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->hasRole('Admin');
+        return $this->hasRole([
+            'Super Admin',
+            'Admin',
+            'Manager',
+            'Rider',
+            'Cashier',
+            ]);
     }
 
     public function driver()
