@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Drivers;
 use App\Filament\Resources\Drivers\Pages\CreateDriver;
 use App\Filament\Resources\Drivers\Pages\EditDriver;
 use App\Filament\Resources\Drivers\Pages\ListDrivers;
+use App\Filament\Resources\Drivers\Pages\ViewDriver;
 use App\Filament\Resources\Drivers\Schemas\DriverForm;
 use App\Filament\Resources\Drivers\Tables\DriversTable;
 use App\Models\Driver;
@@ -14,6 +15,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
+use App\Filament\Resources\Drivers\RelationManagers\SalesRelationManager;
 
 class DriverResource extends Resource
 {
@@ -39,7 +41,7 @@ class DriverResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            SalesRelationManager::class,
         ];
     }
 
@@ -49,6 +51,7 @@ class DriverResource extends Resource
             'index' => ListDrivers::route('/'),
             'create' => CreateDriver::route('/create'),
             'edit' => EditDriver::route('/{record}/edit'),
+            'view' => ViewDriver::route('/{record}'),
         ];
     }
 }

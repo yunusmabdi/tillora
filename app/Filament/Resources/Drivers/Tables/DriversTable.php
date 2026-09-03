@@ -2,10 +2,8 @@
 
 namespace App\Filament\Resources\Drivers\Tables;
 
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Table;
 
 class DriversTable
@@ -15,46 +13,48 @@ class DriversTable
         return $table
             ->columns([
                 TextColumn::make('name')
-                    ->label('Driver')
+                    ->label('Rider')
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('phone')
-                    ->label('Phone')
                     ->searchable(),
 
                 TextColumn::make('vehicle_type')
                     ->label('Vehicle')
-                    ->badge()
-                    ->sortable(),
+                    ->formatStateUsing(
+                        fn ($state) => ucfirst($state ?? '-')
+                    ),
 
                 TextColumn::make('vehicle_number')
                     ->label('Vehicle Number')
                     ->searchable(),
 
-                TextColumn::make('status')
-                    ->badge()
+                BadgeColumn::make('status')
+                    ->colors([
+                        'success' => 'available',
+                        'warning' => 'busy',
+                        'danger' => 'inactive',
+                    ]),
+
+                TextColumn::make('sales_count')
+                    ->label('Assigned Orders')
+                    ->counts('sales')
                     ->sortable(),
 
-                TextColumn::make('user.email')
-                    ->label('Account Email')
-                    ->searchable(),
-
                 TextColumn::make('created_at')
-                    ->label('Created')
-                    ->dateTime()
+                    ->label('Joined')
+                    ->dateTime('d M Y')
                     ->sortable(),
             ])
             ->filters([
                 //
             ])
             ->recordActions([
-                EditAction::make(),
+                //
             ])
             ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
+                //
             ]);
     }
 }

@@ -230,7 +230,7 @@ class RiderController extends Controller
         $driver = $user->driver;
 
         abort_unless(
-            $driver,
+            $driver !== null,
             403,
             'This account is not linked to a rider.'
         );
@@ -241,7 +241,7 @@ class RiderController extends Controller
             ->first();
 
         abort_unless(
-            $driver->status !== 'inactive',
+            $driver !== null,
             403,
             'Rider account is inactive.'
         );
@@ -298,6 +298,20 @@ class RiderController extends Controller
             'data' => $user->unreadNotifications()
                 ->latest()
                 ->get(),
+        ]);
+    }
+    public function markNotificationAsRead(Request $request, string $id ): JsonResponse 
+    {
+        $notification = $request->user()
+            ->notifications()
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $notification->markAsRead();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Notification marked as read.',
         ]);
     }
 }

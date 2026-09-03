@@ -228,4 +228,9 @@ Route::middleware(\Illuminate\Auth\Middleware\Authenticate::class . ':sanctum')
             'notifications/unread',
             [RiderController::class, 'unreadNotifications']
         );
+
+        Route::post(
+            'notifications/{id}/read',
+            [RiderController::class, 'markNotificationAsRead']
+        );
     });
