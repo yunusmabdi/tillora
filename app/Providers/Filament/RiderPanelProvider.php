@@ -18,6 +18,8 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use App\Filament\Pages\RiderDeliveryHistory;
+use App\Filament\Pages\RiderNewOrders;
+use App\Filament\Pages\RiderOrderTracking;
 
 class RiderPanelProvider extends PanelProvider
 {
@@ -39,9 +41,9 @@ class RiderPanelProvider extends PanelProvider
 
             ->pages([
                 RiderDashboard::class,
-                RiderOrderDetails::class,
                 RiderDeliveryHistory::class,
-            ])
+                RiderNewOrders::class,
+            ])           
 
             ->middleware([
                 EncryptCookies::class,

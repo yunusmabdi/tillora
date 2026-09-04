@@ -10,22 +10,56 @@ use Illuminate\Support\Facades\Auth;
 
 class RiderDashboard extends Page
 {
-    protected string $view = 'filament.pages.rider-dashboard';
-
     protected static ?string $title = 'Rider Dashboard';
 
     protected static ?string $navigationLabel = 'Dashboard';
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-home';
 
-    protected static ?int $navigationSort = 1;
+    protected string $view = 'filament.pages.rider-dashboard';
 
+    /**
+     * Get the driver associated with the logged-in rider.
+     */
     public function getDriver(): ?Driver
     {
         return Driver::where('user_id', Auth::id())->first();
     }
 
-    public function getAssignedOrders()
+    /**
+     * Get newly assigned orders waiting for acceptance.
+     */
+    public function getNewOrders()
+    {
+        $driver = $this->getDriver();
+
+        if (! $driver) {
+            return collect();
+        }
+
+        return Sale::query()
+            ->where('driver_id', $driver->id)
+            ->where('fulfillment_status', 'assigned')
+            ->with([
+                'customer',
+                'deliveryZone',
+            ])
+            ->latest('sale_date')
+            ->get();
+    }
+
+    /**
+     * Compatibility with dashboard Blade.
+     */
+    public function getPendingOrders()
+    {
+        return $this->getNewOrders();
+    }
+
+    /**
+     * Get orders currently being handled by the rider.
+     */
+    public function getActiveOrders()
     {
         $driver = $this->getDriver();
 
@@ -36,7 +70,6 @@ class RiderDashboard extends Page
         return Sale::query()
             ->where('driver_id', $driver->id)
             ->whereIn('fulfillment_status', [
-                'assigned',
                 'accepted',
                 'picked_up',
                 'out_for_delivery',
@@ -49,25 +82,18 @@ class RiderDashboard extends Page
             ->get();
     }
 
-    public function getPendingOrders()
-    {
-        return $this->getAssignedOrders()
-            ->where('fulfillment_status', 'assigned');
-    }
-
+    /**
+     * Compatibility with dashboard Blade.
+     */
     public function getActiveOrder(): ?Sale
     {
-        return $this->getAssignedOrders()
-            ->whereIn('fulfillment_status', [
-                'accepted',
-                'picked_up',
-                'out_for_delivery',
-            ])
-            ->sortByDesc('sale_date')
-            ->first();
+        return $this->getActiveOrders()->first();
     }
 
-    public function getDeliveredToday()
+    /**
+     * Get all completed deliveries.
+     */
+    public function getCompletedOrders()
     {
         $driver = $this->getDriver();
 
@@ -78,7 +104,6 @@ class RiderDashboard extends Page
         return Sale::query()
             ->where('driver_id', $driver->id)
             ->where('fulfillment_status', 'delivered')
-            ->whereDate('sale_date', today())
             ->with([
                 'customer',
                 'deliveryZone',
@@ -87,59 +112,62 @@ class RiderDashboard extends Page
             ->get();
     }
 
-    public function getTodayCount(): int
+    /**
+     * Get deliveries completed today.
+     */
+    public function getDeliveredToday()
     {
-        $driver = $this->getDriver();
-
-        if (! $driver) {
-            return 0;
-        }
-
-        return Sale::query()
-            ->where('driver_id', $driver->id)
-            ->whereDate('sale_date', today())
-            ->count();
+        return $this->getCompletedOrders()
+            ->filter(
+                fn (Sale $order) =>
+                    $order->sale_date?->isToday()
+            );
     }
 
-    public function getDeliveredCount(): int
+    /**
+     * Compatibility with dashboard Blade.
+     */
+    public function getTodayCount(): int
     {
         return $this->getDeliveredToday()->count();
     }
 
-    public function getActiveCount(): int
+    /**
+     * Number of newly assigned orders.
+     */
+    public function getNewOrdersCount(): int
     {
-        return $this->getAssignedOrders()
-            ->whereIn('fulfillment_status', [
-                'accepted',
-                'picked_up',
-                'out_for_delivery',
-            ])
-            ->count();
+        return $this->getNewOrders()->count();
     }
 
+    /**
+     * Number of active deliveries.
+     */
+    public function getActiveOrdersCount(): int
+    {
+        return $this->getActiveOrders()->count();
+    }
+
+    /**
+     * Number of completed deliveries.
+     */
+    public function getCompletedOrdersCount(): int
+    {
+        return $this->getCompletedOrders()->count();
+    }
+
+    /**
+     * Accept an assigned order.
+     */
     public function acceptOrder(int $orderId): void
     {
         $driver = $this->getDriver();
 
-        if (! $driver) {
-            return;
-        }
-
         $order = Sale::query()
             ->where('id', $orderId)
-            ->where('driver_id', $driver->id)
+            ->where('driver_id', $driver?->id)
             ->where('fulfillment_status', 'assigned')
-            ->first();
-
-        if (! $order) {
-            Notification::make()
-                ->title('Order unavailable')
-                ->body('This order is no longer available.')
-                ->danger()
-                ->send();
-
-            return;
-        }
+            ->firstOrFail();
 
         $order->update([
             'fulfillment_status' => 'accepted',
@@ -147,34 +175,29 @@ class RiderDashboard extends Page
 
         Notification::make()
             ->title('Order accepted')
-            ->body("Order {$order->invoice_number} is now assigned to you.")
+            ->body("Order {$order->invoice_number} has been accepted.")
             ->success()
             ->send();
+
+        $this->redirect(
+            \App\Filament\Pages\RiderOrderDetails::getUrl([
+                'record' => $order->id,
+            ])
+        );
     }
 
+    /**
+     * Decline an assigned order.
+     */
     public function declineOrder(int $orderId): void
     {
         $driver = $this->getDriver();
 
-        if (! $driver) {
-            return;
-        }
-
         $order = Sale::query()
             ->where('id', $orderId)
-            ->where('driver_id', $driver->id)
+            ->where('driver_id', $driver?->id)
             ->where('fulfillment_status', 'assigned')
-            ->first();
-
-        if (! $order) {
-            Notification::make()
-                ->title('Order unavailable')
-                ->body('This order is no longer available.')
-                ->danger()
-                ->send();
-
-            return;
-        }
+            ->firstOrFail();
 
         $order->update([
             'fulfillment_status' => 'declined',
@@ -182,79 +205,27 @@ class RiderDashboard extends Page
 
         Notification::make()
             ->title('Order declined')
-            ->body("Order {$order->invoice_number} was declined.")
+            ->body("Order {$order->invoice_number} has been declined.")
             ->warning()
             ->send();
     }
 
-    public function updateStatus(int $orderId, string $status): void
+    /**
+     * Open an order's details/tracking page.
+     */
+    public function viewOrder(int $orderId): void
     {
         $driver = $this->getDriver();
 
-        if (! $driver) {
-            return;
-        }
-
-        $allowedTransitions = [
-            'accepted' => 'picked_up',
-            'picked_up' => 'out_for_delivery',
-            'out_for_delivery' => 'delivered',
-        ];
-
         $order = Sale::query()
             ->where('id', $orderId)
-            ->where('driver_id', $driver->id)
-            ->first();
+            ->where('driver_id', $driver?->id)
+            ->firstOrFail();
 
-        if (! $order) {
-            Notification::make()
-                ->title('Order not found')
-                ->danger()
-                ->send();
-
-            return;
-        }
-
-        $currentStatus = $order->fulfillment_status;
-
-        if (
-            ! isset($allowedTransitions[$currentStatus]) ||
-            $allowedTransitions[$currentStatus] !== $status
-        ) {
-            Notification::make()
-                ->title('Invalid status update')
-                ->body('This action cannot be performed right now.')
-                ->danger()
-                ->send();
-
-            return;
-        }
-
-        /*
-         * Delivery should only be completed when the order
-         * has been fully paid.
-         */
-        if ($status === 'delivered' && $order->payment_status !== 'paid') {
-            Notification::make()
-                ->title('Payment required')
-                ->body('This order cannot be marked as delivered until it is fully paid.')
-                ->danger()
-                ->send();
-
-            return;
-        }
-
-        $order->update([
-            'fulfillment_status' => $status,
-        ]);
-
-        Notification::make()
-            ->title('Delivery updated')
-            ->body(
-                "Order {$order->invoice_number} is now " .
-                str_replace('_', ' ', $status) . '.'
-            )
-            ->success()
-            ->send();
+        $this->redirect(
+            \App\Filament\Pages\RiderOrderDetails::getUrl([
+                'record' => $order->id,
+            ])
+        );
     }
 }
