@@ -54,4 +54,13 @@ class StockMovementResource extends Resource
         'view' => ViewStockMovement::route('/{record}'),
         ];
     }
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->guard()->user()?->hasAnyRole([
+            'Super Admin',
+            'Admin',
+            'Manager',
+            'Cashier',
+        ]);
+    }
 }

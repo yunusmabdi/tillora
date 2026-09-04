@@ -9,6 +9,7 @@ use App\Filament\Resources\Purchases\Schemas\PurchaseForm;
 use App\Filament\Resources\Purchases\Tables\PurchasesTable;
 use App\Models\Purchase;
 use BackedEnum;
+use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -50,5 +51,14 @@ class PurchaseResource extends Resource
             'create' => CreatePurchase::route('/create'),
             'edit' => EditPurchase::route('/{record}/edit'),
         ];
+    }
+    public static function shouldRegisterNavigation(): bool
+    {
+        return Filament::auth()->user()?->hasAnyRole([
+            'Super Admin',
+            'Admin',
+            'Manager',
+            'Cashier',
+        ]);
     }
 }

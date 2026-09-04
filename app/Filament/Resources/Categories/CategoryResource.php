@@ -15,6 +15,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Auth;
 
 
 class CategoryResource extends Resource
@@ -60,4 +61,12 @@ class CategoryResource extends Resource
                 SoftDeletingScope::class,
             ]);
     }
+    public static function shouldRegisterNavigation(): bool
+{
+    return Auth::user()?->hasAnyRole([
+        'Super Admin',
+        'Admin',
+        'Manager',
+    ]);
+}
 }

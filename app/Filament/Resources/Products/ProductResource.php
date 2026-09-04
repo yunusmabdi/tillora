@@ -80,4 +80,12 @@ class ProductResource extends Resource
     {
         return Auth::user()?->hasPermissionTo('delete products') ?? false;
     }
+    public static function shouldRegisterNavigation(): bool
+    {
+        return Auth::user()?->hasAnyRole([
+            'Super Admin',
+            'Admin',
+            'Manager'
+       ]);
+    }
 }

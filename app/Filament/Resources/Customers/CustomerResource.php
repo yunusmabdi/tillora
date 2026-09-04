@@ -11,6 +11,7 @@ use App\Models\Customer;
 use BackedEnum;
 use UnitEnum;
 use Filament\Resources\Resource;
+use Filament\Facades\Filament;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
@@ -51,5 +52,14 @@ class CustomerResource extends Resource
             'create' => CreateCustomer::route('/create'),
             'edit' => EditCustomer::route('/{record}/edit'),
         ];
+    }
+    public static function shouldRegisterNavigation(): bool
+    {
+        return Filament::auth()->user()?->hasAnyRole([
+            'Super Admin',
+            'Admin',
+            'Manager',
+            'Cashier',
+        ]);
     }
 }

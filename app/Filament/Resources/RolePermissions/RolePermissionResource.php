@@ -9,6 +9,7 @@ use App\Filament\Resources\RolePermissions\Schemas\RolePermissionForm;
 use App\Filament\Resources\RolePermissions\Tables\RolePermissionsTable;
 use BackedEnum;
 use Filament\Resources\Resource;
+use Filament\Facades\Filament;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
@@ -54,5 +55,13 @@ class RolePermissionResource extends Resource
             'create' => CreateRolePermission::route('/create'),
             'edit' => EditRolePermission::route('/{record}/edit'),
         ];
+    }
+    public static function shouldRegisterNavigation(): bool
+    {
+        return Filament::auth()->user()?->hasAnyRole([
+            'Super Admin',
+            'Admin',
+            'Manager',
+        ]);
     }
 }

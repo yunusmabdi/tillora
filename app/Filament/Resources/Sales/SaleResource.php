@@ -8,6 +8,7 @@ use App\Filament\Resources\Sales\Tables\SalesTable;
 use App\Models\Sale;
 use BackedEnum;
 use Illuminate\Support\Facades\Auth;
+use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -69,5 +70,23 @@ class SaleResource extends Resource
             'Manager',
             'Cashier',
         ]);
+    }
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        $user = Auth::user();
+
+        if ($user?->hasRole('Rider')) {
+            $driver = $user->driver;
+
+            if (! $driver) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            return $query->where('driver_id', $driver->id);
+        }
+
+        return $query;
     }
 }

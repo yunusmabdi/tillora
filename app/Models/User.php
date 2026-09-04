@@ -31,14 +31,18 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
+        if ($panel->getId() === 'rider') {
+            return $this->hasRole('Rider');
+        }
+
         return $this->hasRole([
             'Super Admin',
             'Admin',
             'Manager',
-            'Rider',
             'Cashier',
             ]);
     }
+
 
     public function driver()
     {

@@ -10,6 +10,7 @@ use App\Models\StockMovement;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
+use App\Notifications\RiderOrderAssigned;
 
 class SalesService
 {
@@ -905,6 +906,13 @@ class SalesService
                 'status' =>
                     'busy',
             ]);
+            $driver->loadMissing('user');
+
+            if ($driver->user) {
+                $driver->user->notify(
+                    new RiderOrderAssigned($sale)
+                );
+            }
 
             return $sale->fresh([
                 'customer',

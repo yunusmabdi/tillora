@@ -9,6 +9,7 @@ use App\Filament\Resources\Suppliers\Schemas\SupplierForm;
 use App\Filament\Resources\Suppliers\Tables\SuppliersTable;
 use App\Models\Supplier;
 use BackedEnum;
+use Illuminate\Support\Facades\Auth;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
@@ -50,5 +51,14 @@ class SupplierResource extends Resource
             'create' => CreateSupplier::route('/create'),
             'edit' => EditSupplier::route('/{record}/edit'),
         ];
+    }
+    public static function shouldRegisterNavigation(): bool
+    {
+        return Auth::user()?->hasAnyRole([
+            'Super Admin',
+            'Admin',
+            'Manager',
+            'Cashier',
+        ]);
     }
 }
