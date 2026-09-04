@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\RiderDashboard;
+use App\Filament\Pages\RiderOrderDetails;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -16,6 +17,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use App\Filament\Pages\RiderDeliveryHistory;
 
 class RiderPanelProvider extends PanelProvider
 {
@@ -24,6 +26,7 @@ class RiderPanelProvider extends PanelProvider
         return $panel
             ->id('rider')
             ->path('rider')
+            ->viteTheme('resources/css/filament/rider/theme.css')
             ->login()
             ->colors([
                 'primary' => Color::Blue,
@@ -36,6 +39,8 @@ class RiderPanelProvider extends PanelProvider
 
             ->pages([
                 RiderDashboard::class,
+                RiderOrderDetails::class,
+                RiderDeliveryHistory::class,
             ])
 
             ->middleware([
